@@ -1,243 +1,56 @@
+name: QA Morning Check
 
-#!/usr/bin/env node
+on:
+  schedule:
+    # Morning Check - 07:00 Israel
+    - cron: '0 4 * * *'
+    # Afternoon Check - 13:00 Israel  
+    - cron: '0 10 * * *'
+    # Evening Check - 19:00 Israel
+    - cron: '0 16 * * *'
+  workflow_dispatch:
+    inputs:
+      send_email:
+        description: 'Send email report'
+        required: false
+        default: 'true'
+        type: boolean
 
-/**
- * 🦎 QA Iguana Agent - Main Entry Point
- * The Empire Guardian - Automated QA Testing
- */
+env:
+  NODE_VERSION: '20'
+  TZ: 'Asia/Jerusalem'
 
-require('dotenv').config();
-
-const fs = require('fs');
-const path = require('path');
-
-// Import test modules
-const SSLChecker = require('./tests/ssl-checker');
-const UptimeMonitor = require('./tests/uptime-monitor');
-const LinkValidator = require('./tests/link-validator');
-const ReportGenerator = require('./reports/report-generator');
-const EmailSender = require('./reports/email-sender');
-
-// Parse command line arguments
-const args = process.argv.slice(2);
-const options = {
-  ssl: args.includes('--ssl') || args.includes('--full-report') || args.length === 0,
-  uptime: args.includes('--uptime') || args.includes('--full-report') || args.length === 0,
-  links: args.includes('--links') || args.includes('--full-report') || args.length === 0,
-  fullReport: args.includes('--full-report') || args.length === 0,
-  sendEmail: args.includes('--send-email'),
-  verbose: args.includes('--verbose') || args.includes('-v')
-};
-
-/**
- * Load configuration
- */
-function loadConfig() {
-  const configPath = path.join(__dirname, 'config', 'sites.json');
-  return JSON.parse(fs.readFileSync(configPath, 'utf8'));
-}
-
-/**
- * Print banner
- */
-function printBanner() {
-  console.log(`
-╔═══════════════════════════════════════════════════════════════╗
-║                                                               ║
-║           🦎 QA IGUANA AGENT - The Empire Guardian            ║
-║                                                               ║
-║              "שומר על האימפריה 24/7"                          ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
-  `);
-  console.log(`📅 ${new Date().toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' })}`);
-  console.log('');
-}
-
-/**
- * Run SSL checks
- */
-async function runSSLChecks(config) {
-  console.log('🔐 Starting SSL Certificate Checks...');
-  console.log('─'.repeat(50));
-  
-  const checker = new SSLChecker({
-    warningDays: config.settings.thresholds.sslExpiryWarning,
-    criticalDays: config.settings.thresholds.sslExpiryCritical
-  });
-  
-  const sitesToCheck = config.sites.filter(site => site.checks && site.checks.ssl);
-  
-  if (sitesToCheck.length === 0) {
-    console.log('No sites configured for SSL checks');
-    return { allHealthy: true, details: [] };
-  }
-  
-  const results = await checker.checkMultipleSites(sitesToCheck);
-  const summary = checker.generateSummary(results);
-  
-  console.log('');
-  results.forEach(result => console.log(checker.formatResult(result)));
-  console.log('');
-  
-  return summary;
-}
-
-/**
- * Run uptime checks
- */
-async function runUptimeChecks(config) {
-  console.log('⬆️ Starting Uptime & Performance Checks...');
-  console.log('─'.repeat(50));
-  
-  const monitor = new UptimeMonitor({
-    warningThreshold: config.settings.thresholds.responseTimeWarning,
-    criticalThreshold: config.settings.thresholds.responseTimeCritical
-  });
-  
-  const sitesToCheck = config.sites.filter(site => site.checks && site.checks.uptime);
-  
-  if (sitesToCheck.length === 0) {
-    console.log('No sites configured for uptime checks');
-    return { allHealthy: true, details: [] };
-  }
-  
-  const results = await monitor.checkMultipleSites(sitesToCheck);
-  const summary = monitor.generateSummary(results);
-  
-  console.log('');
-  results.forEach(result => console.log(monitor.formatResult(result)));
-  console.log('');
-  
-  return summary;
-}
-
-/**
- * Run link validation
- */
-async function runLinkValidation(config) {
-  console.log('🔗 Starting Link Validation...');
-  console.log('─'.repeat(50));
-  
-  const validator = new LinkValidator();
-  
-  const sitesToCheck = config.sites.filter(site => site.checks && site.checks.links);
-  
-  if (sitesToCheck.length === 0) {
-    console.log('No sites configured for link checks');
-    return { allHealthy: true, details: [] };
-  }
-  
-  const results = await validator.validateMultipleSites(sitesToCheck);
-  const summary = validator.generateSummary(results);
-  
-  console.log('');
-  results.forEach(result => console.log(validator.formatResult(result)));
-  console.log('');
-  
-  return summary;
-}
-
-/**
- * Main function
- */
-async function main() {
-  printBanner();
-  
-  const config = loadConfig();
-  const results = {};
-  
-  // Always run all tests when --full-report is specified
-  if (options.ssl) {
-    results.ssl = await runSSLChecks(config);
-  }
-  
-  if (options.uptime) {
-    results.uptime = await runUptimeChecks(config);
-  }
-  
-  if (options.links) {
-    results.links = await runLinkValidation(config);
-  }
-  
-  // Generate report
-  console.log('📊 Generating Report...');
-  console.log('─'.repeat(50));
-  
-  const reportGenerator = new ReportGenerator({
-    timezone: config.settings.timezone
-  });
-  
-  const report = reportGenerator.generateMorningReport(results);
-  
-  // Save report to file
-  const reportDir = path.join(__dirname, 'reports', 'output');
-  if (!fs.existsSync(reportDir)) {
-    fs.mkdirSync(reportDir, { recursive: true });
-  }
-  
-  const dateStr = new Date().toISOString().split('T')[0];
-  fs.writeFileSync(
-    path.join(reportDir, `report-${dateStr}.txt`),
-    report.text
-  );
-  fs.writeFileSync(
-    path.join(reportDir, `report-${dateStr}.html`),
-    report.html
-  );
-  fs.writeFileSync(
-    path.join(reportDir, `report-${dateStr}.json`),
-    report.json
-  );
-  
-  console.log(`✅ Reports saved to ${reportDir}`);
-  
-  // Print text report to console
-  console.log(report.text);
-  
-  // Send email if requested
-  if (options.sendEmail) {
-    console.log('');
-    console.log('📧 Sending Email Report...');
-    console.log('─'.repeat(50));
+jobs:
+  qa-check:
+    name: Run QA Checks
+    runs-on: ubuntu-latest
     
-    const emailSender = new EmailSender({
-      to: config.settings.alertEmail,
-      backupTo: config.settings.backupEmail
-    });
-    
-    const emailResult = await emailSender.sendMorningReport(report);
-    
-    if (emailResult.success) {
-      console.log('✅ Email sent successfully!');
-    } else {
-      console.log(`❌ Email failed: ${emailResult.error}`);
-    }
-  }
-  
-  // Final summary
-  console.log('');
-  console.log('═'.repeat(50));
-  console.log('🦎 QA Iguana Agent - Check Complete');
-  console.log('═'.repeat(50));
-  
-  // Determine exit code based on results
-  const sslHealthy = !results.ssl || results.ssl.allHealthy;
-  const uptimeHealthy = !results.uptime || results.uptime.allHealthy;
-  const linksHealthy = !results.links || results.links.allHealthy;
-  const allHealthy = sslHealthy && uptimeHealthy && linksHealthy;
-  
-  if (allHealthy) {
-    console.log('✅ All systems healthy!');
-    process.exit(0);
-  } else {
-    console.log('⚠️ Issues detected - check report for details');
-    process.exit(1);
-  }
-}
-
-// Run main function
-main().catch(error => {
-  console.error('❌ Fatal error:', error);
-  process.exit(1);
-});
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: Install Dependencies
+        run: npm install
+      
+      - name: Run QA Iguana Agent
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
+          BACKUP_EMAIL: ${{ secrets.BACKUP_EMAIL }}
+        run: node index.js --full-report --send-email
+      
+      - name: Upload Report Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qa-reports-${{ github.run_number }}
+          path: reports/output/
+          retention-days: 30
