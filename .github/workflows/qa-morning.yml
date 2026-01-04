@@ -2,11 +2,8 @@ name: QA Morning Check
 
 on:
   schedule:
-    # Morning Check - 07:00 Israel
     - cron: '0 4 * * *'
-    # Afternoon Check - 13:00 Israel  
     - cron: '0 10 * * *'
-    # Evening Check - 19:00 Israel
     - cron: '0 16 * * *'
   workflow_dispatch:
     inputs:
