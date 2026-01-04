@@ -3,14 +3,6 @@
 /**
  * 🦎 QA Iguana Agent - Main Entry Point
  * The Empire Guardian - Automated QA Testing
- * 
- * Usage:
- *   node index.js                    Run all tests
- *   node index.js --ssl              Run SSL checks only
- *   node index.js --uptime           Run uptime checks only
- *   node index.js --links            Run link validation only
- *   node index.js --full-report      Generate full report
- *   node index.js --send-email       Send report via email
  */
 
 require('dotenv').config();
@@ -28,9 +20,9 @@ const EmailSender = require('./reports/email-sender');
 // Parse command line arguments
 const args = process.argv.slice(2);
 const options = {
-  ssl: args.includes('--ssl') || args.length === 0,
-  uptime: args.includes('--uptime') || args.length === 0,
-  links: args.includes('--links') || args.length === 0,
+  ssl: args.includes('--ssl') || args.includes('--full-report') || args.length === 0,
+  uptime: args.includes('--uptime') || args.includes('--full-report') || args.length === 0,
+  links: args.includes('--links') || args.includes('--full-report') || args.length === 0,
   fullReport: args.includes('--full-report') || args.length === 0,
   sendEmail: args.includes('--send-email'),
   verbose: args.includes('--verbose') || args.includes('-v')
@@ -73,7 +65,13 @@ async function runSSLChecks(config) {
     criticalDays: config.settings.thresholds.sslExpiryCritical
   });
   
-  const sitesToCheck = config.sites.filter(site => site.checks.ssl);
+  const sitesToCheck = config.sites.filter(site => site.checks && site.checks.ssl);
+  
+  if (sitesToCheck.length === 0) {
+    console.log('No sites configured for SSL checks');
+    return { allHealthy: true, details: [] };
+  }
+  
   const results = await checker.checkMultipleSites(sitesToCheck);
   const summary = checker.generateSummary(results);
   
@@ -96,7 +94,13 @@ async function runUptimeChecks(config) {
     criticalThreshold: config.settings.thresholds.responseTimeCritical
   });
   
-  const sitesToCheck = config.sites.filter(site => site.checks.uptime);
+  const sitesToCheck = config.sites.filter(site => site.checks && site.checks.uptime);
+  
+  if (sitesToCheck.length === 0) {
+    console.log('No sites configured for uptime checks');
+    return { allHealthy: true, details: [] };
+  }
+  
   const results = await monitor.checkMultipleSites(sitesToCheck);
   const summary = monitor.generateSummary(results);
   
@@ -116,7 +120,13 @@ async function runLinkValidation(config) {
   
   const validator = new LinkValidator();
   
-  const sitesToCheck = config.sites.filter(site => site.checks.links);
+  const sitesToCheck = config.sites.filter(site => site.checks && site.checks.links);
+  
+  if (sitesToCheck.length === 0) {
+    console.log('No sites configured for link checks');
+    return { allHealthy: true, details: [] };
+  }
+  
   const results = await validator.validateMultipleSites(sitesToCheck);
   const summary = validator.generateSummary(results);
   
@@ -136,7 +146,7 @@ async function main() {
   const config = loadConfig();
   const results = {};
   
-  // Run tests based on options
+  // Always run all tests when --full-report is specified
   if (options.ssl) {
     results.ssl = await runSSLChecks(config);
   }
@@ -149,61 +159,58 @@ async function main() {
     results.links = await runLinkValidation(config);
   }
   
-  // Generate report if requested
-  if (options.fullReport) {
-    console.log('📊 Generating Report...');
+  // Generate report
+  console.log('📊 Generating Report...');
+  console.log('─'.repeat(50));
+  
+  const reportGenerator = new ReportGenerator({
+    timezone: config.settings.timezone
+  });
+  
+  const report = reportGenerator.generateMorningReport(results);
+  
+  // Save report to file
+  const reportDir = path.join(__dirname, 'reports', 'output');
+  if (!fs.existsSync(reportDir)) {
+    fs.mkdirSync(reportDir, { recursive: true });
+  }
+  
+  const dateStr = new Date().toISOString().split('T')[0];
+  fs.writeFileSync(
+    path.join(reportDir, `report-${dateStr}.txt`),
+    report.text
+  );
+  fs.writeFileSync(
+    path.join(reportDir, `report-${dateStr}.html`),
+    report.html
+  );
+  fs.writeFileSync(
+    path.join(reportDir, `report-${dateStr}.json`),
+    report.json
+  );
+  
+  console.log(`✅ Reports saved to ${reportDir}`);
+  
+  // Print text report to console
+  console.log(report.text);
+  
+  // Send email if requested
+  if (options.sendEmail) {
+    console.log('');
+    console.log('📧 Sending Email Report...');
     console.log('─'.repeat(50));
     
-    const reportGenerator = new ReportGenerator({
-      timezone: config.settings.timezone
+    const emailSender = new EmailSender({
+      to: config.settings.alertEmail,
+      backupTo: config.settings.backupEmail
     });
     
-    const report = reportGenerator.generateMorningReport(results);
+    const emailResult = await emailSender.sendMorningReport(report);
     
-    // Save report to file
-    const reportDir = path.join(__dirname, 'reports', 'output');
-    if (!fs.existsSync(reportDir)) {
-      fs.mkdirSync(reportDir, { recursive: true });
-    }
-    
-    const dateStr = new Date().toISOString().split('T')[0];
-    fs.writeFileSync(
-      path.join(reportDir, `report-${dateStr}.txt`),
-      report.text
-    );
-    fs.writeFileSync(
-      path.join(reportDir, `report-${dateStr}.html`),
-      report.html
-    );
-    fs.writeFileSync(
-      path.join(reportDir, `report-${dateStr}.json`),
-      report.json
-    );
-    
-    console.log(`✅ Reports saved to ${reportDir}`);
-    console.log('');
-    
-    // Print text report to console
-    console.log(report.text);
-    
-    // Send email if requested
-    if (options.sendEmail) {
-      console.log('');
-      console.log('📧 Sending Email Report...');
-      console.log('─'.repeat(50));
-      
-      const emailSender = new EmailSender({
-        to: config.settings.alertEmail,
-        backupTo: config.settings.backupEmail
-      });
-      
-      const emailResult = await emailSender.sendMorningReport(report);
-      
-      if (emailResult.success) {
-        console.log('✅ Email sent successfully!');
-      } else {
-        console.log(`❌ Email failed: ${emailResult.error}`);
-      }
+    if (emailResult.success) {
+      console.log('✅ Email sent successfully!');
+    } else {
+      console.log(`❌ Email failed: ${emailResult.error}`);
     }
   }
   
@@ -213,11 +220,11 @@ async function main() {
   console.log('🦎 QA Iguana Agent - Check Complete');
   console.log('═'.repeat(50));
   
-  // Determine exit code
-  const allHealthy = 
-    (!results.ssl || results.ssl.allHealthy) &&
-    (!results.uptime || results.uptime.allHealthy) &&
-    (!results.links || results.links.allHealthy);
+  // Determine exit code based on results
+  const sslHealthy = !results.ssl || results.ssl.allHealthy;
+  const uptimeHealthy = !results.uptime || results.uptime.allHealthy;
+  const linksHealthy = !results.links || results.links.allHealthy;
+  const allHealthy = sslHealthy && uptimeHealthy && linksHealthy;
   
   if (allHealthy) {
     console.log('✅ All systems healthy!');
