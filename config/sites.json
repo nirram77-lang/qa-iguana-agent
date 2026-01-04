@@ -1,0 +1,162 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "lastUpdated": "2026-01-05",
+    "owner": "Nir Ram - No Art Gallery"
+  },
+  "settings": {
+    "alertEmail": "nir@noartgallery.com",
+    "backupEmail": "nir.ram77@gmail.com",
+    "timezone": "Asia/Jerusalem",
+    "schedules": {
+      "morning": "07:00",
+      "afternoon": "13:00",
+      "evening": "19:00"
+    },
+    "thresholds": {
+      "responseTimeWarning": 2000,
+      "responseTimeCritical": 5000,
+      "sslExpiryWarning": 30,
+      "sslExpiryCritical": 7
+    }
+  },
+  "sites": [
+    {
+      "id": "i4iguana-app",
+      "name": "I4IGUANA App",
+      "url": "https://i4iguana.com",
+      "type": "app",
+      "priority": "critical",
+      "languages": ["he", "en", "ru", "ar"],
+      "checks": {
+        "ssl": true,
+        "uptime": true,
+        "links": true,
+        "forms": true,
+        "i18n": true,
+        "screenshots": true
+      },
+      "pages": [
+        { "path": "/", "name": "Home" },
+        { "path": "/login", "name": "Login" },
+        { "path": "/world-selection", "name": "World Selection" }
+      ],
+      "expectedElements": {
+        "logo": ".iguana-logo, .logo",
+        "navigation": "nav, .nav, .bottom-nav"
+      }
+    },
+    {
+      "id": "i4iguana-admin",
+      "name": "I4IGUANA Admin Panel",
+      "url": "https://i4iguana.com/admin",
+      "type": "admin",
+      "priority": "critical",
+      "languages": ["en"],
+      "checks": {
+        "ssl": true,
+        "uptime": true,
+        "links": false,
+        "forms": false,
+        "i18n": false,
+        "screenshots": false
+      },
+      "pages": [
+        { "path": "/", "name": "Admin Dashboard" }
+      ]
+    },
+    {
+      "id": "noartgallery",
+      "name": "No Art Gallery",
+      "url": "https://noartgallery.com",
+      "type": "website",
+      "priority": "critical",
+      "languages": ["en"],
+      "checks": {
+        "ssl": true,
+        "uptime": true,
+        "links": true,
+        "forms": true,
+        "i18n": false,
+        "screenshots": true
+      },
+      "pages": [
+        { "path": "/", "name": "Home" },
+        { "path": "/accessibility.html", "name": "Accessibility" },
+        { "path": "/privacy.html", "name": "Privacy" },
+        { "path": "/terms.html", "name": "Terms" }
+      ],
+      "expectedElements": {
+        "portals": ".portal-card",
+        "footer": "footer"
+      }
+    },
+    {
+      "id": "funnydates-he",
+      "name": "FunnyDates Hebrew",
+      "url": "https://funnydates101.co.il",
+      "type": "website",
+      "priority": "critical",
+      "languages": ["he"],
+      "checks": {
+        "ssl": true,
+        "uptime": true,
+        "links": true,
+        "forms": true,
+        "i18n": false,
+        "screenshots": true
+      },
+      "pages": [
+        { "path": "/", "name": "Home" }
+      ]
+    },
+    {
+      "id": "funnydates-en",
+      "name": "FunnyDates English (Love Bites)",
+      "url": "https://funnydates101.com",
+      "type": "website",
+      "priority": "high",
+      "languages": ["en"],
+      "checks": {
+        "ssl": true,
+        "uptime": true,
+        "links": true,
+        "forms": false,
+        "i18n": false,
+        "screenshots": true
+      },
+      "pages": [
+        { "path": "/", "name": "Home" }
+      ]
+    },
+    {
+      "id": "gocio",
+      "name": "GO CIO",
+      "url": "https://gocio.org",
+      "type": "website",
+      "priority": "medium",
+      "languages": ["he"],
+      "checks": {
+        "ssl": true,
+        "uptime": true,
+        "links": true,
+        "forms": true,
+        "i18n": false,
+        "screenshots": false
+      },
+      "pages": [
+        { "path": "/", "name": "Home" }
+      ]
+    }
+  ],
+  "vercelProjects": [
+    {
+      "name": "here-4-iguana",
+      "domains": ["i4iguana.com", "www.i4iguana.com", "here-4-iguana.vercel.app"]
+    },
+    {
+      "name": "noartgallery-website",
+      "domains": ["noartgallery.com"]
+    }
+  ]
+}

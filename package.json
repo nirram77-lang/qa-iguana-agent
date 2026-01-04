@@ -1,0 +1,30 @@
+{
+  "name": "qa-iguana-agent",
+  "version": "1.0.0",
+  "description": "🦎 QA Iguana Agent - The Empire Guardian",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js",
+    "test:ssl": "node tests/ssl-checker.js",
+    "test:uptime": "node tests/uptime-monitor.js",
+    "test:links": "node tests/link-validator.js",
+    "report": "node reports/report-generator.js",
+    "morning-check": "node index.js --full-report --send-email"
+  },
+  "keywords": ["qa", "testing", "monitoring", "ssl", "uptime"],
+  "author": "No Art Gallery - Nir Ram",
+  "license": "MIT",
+  "dependencies": {
+    "node-fetch": "^2.7.0",
+    "cheerio": "^1.0.0-rc.12",
+    "nodemailer": "^6.9.7",
+    "ssl-checker": "^2.0.8",
+    "dotenv": "^16.3.1",
+    "chalk": "^4.1.2",
+    "ora": "^5.4.1"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
