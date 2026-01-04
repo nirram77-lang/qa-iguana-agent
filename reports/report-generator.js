@@ -31,50 +31,61 @@ class ReportGenerator {
   generateMorningReport(results) {
     const timestamp = this.getTimestamp();
     
+    // Safely check if results exist
+    const sslResults = results.ssl || { allHealthy: true, details: [] };
+    const uptimeResults = results.uptime || { allHealthy: true, details: [] };
+    const linksResults = results.links || { allHealthy: true, details: [] };
+    
     // Calculate overall health
     const allHealthy = 
-      results.ssl.allHealthy && 
-      results.uptime.allHealthy && 
-      results.links.allHealthy;
+      sslResults.allHealthy && 
+      uptimeResults.allHealthy && 
+      linksResults.allHealthy;
 
     const criticalIssues = [];
     const warnings = [];
     const actions = [];
 
     // Analyze SSL results
-    results.ssl.details.forEach(site => {
-      if (site.status === 'critical') {
-        criticalIssues.push(`🔐 ${site.siteName}: SSL ${site.isExpired ? 'EXPIRED!' : `expires in ${site.daysRemaining} days`}`);
-        actions.push(`Renew SSL certificate for ${site.siteName}`);
-      } else if (site.status === 'warning') {
-        warnings.push(`🔐 ${site.siteName}: SSL expires in ${site.daysRemaining} days`);
-      } else if (site.status === 'error') {
-        criticalIssues.push(`🔐 ${site.siteName}: SSL Error - ${site.error}`);
-        actions.push(`Fix SSL configuration for ${site.siteName}`);
-      }
-    });
+    if (sslResults.details && sslResults.details.length > 0) {
+      sslResults.details.forEach(site => {
+        if (site.status === 'critical') {
+          criticalIssues.push(`🔐 ${site.siteName}: SSL ${site.isExpired ? 'EXPIRED!' : `expires in ${site.daysRemaining} days`}`);
+          actions.push(`Renew SSL certificate for ${site.siteName}`);
+        } else if (site.status === 'warning') {
+          warnings.push(`🔐 ${site.siteName}: SSL expires in ${site.daysRemaining} days`);
+        } else if (site.status === 'error') {
+          criticalIssues.push(`🔐 ${site.siteName}: SSL Error - ${site.error}`);
+          actions.push(`Fix SSL configuration for ${site.siteName}`);
+        }
+      });
+    }
 
     // Analyze Uptime results
-    results.uptime.details.forEach(site => {
-      if (site.overallStatus === 'down' || site.overallStatus === 'error') {
-        criticalIssues.push(`⬇️ ${site.siteName}: SITE DOWN!`);
-        actions.push(`Investigate downtime for ${site.siteName}`);
-      } else if (site.overallStatus === 'critical') {
-        warnings.push(`🐢 ${site.siteName}: Very slow response (${site.avgResponseTime}ms)`);
-      } else if (site.overallStatus === 'warning') {
-        warnings.push(`🐢 ${site.siteName}: Slow response (${site.avgResponseTime}ms)`);
-      }
-    });
+    if (uptimeResults.details && uptimeResults.details.length > 0) {
+      uptimeResults.details.forEach(site => {
+        if (site.overallStatus === 'down' || site.overallStatus === 'error') {
+          criticalIssues.push(`⬇️ ${site.siteName}: SITE DOWN!`);
+          actions.push(`Investigate downtime for ${site.siteName}`);
+        } else if (site.overallStatus === 'critical') {
+          warnings.push(`🐢 ${site.siteName}: Very slow response (${site.avgResponseTime}ms)`);
+        } else if (site.overallStatus === 'warning') {
+          warnings.push(`🐢 ${site.siteName}: Slow response (${site.avgResponseTime}ms)`);
+        }
+      });
+    }
 
     // Analyze Link results
-    results.links.details.forEach(site => {
-      if (site.totalBrokenLinks > 0) {
-        warnings.push(`🔗 ${site.siteName}: ${site.totalBrokenLinks} broken link(s)`);
-        if (site.totalBrokenLinks > 5) {
-          actions.push(`Fix broken links on ${site.siteName}`);
+    if (linksResults.details && linksResults.details.length > 0) {
+      linksResults.details.forEach(site => {
+        if (site.totalBrokenLinks > 0) {
+          warnings.push(`🔗 ${site.siteName}: ${site.totalBrokenLinks} broken link(s)`);
+          if (site.totalBrokenLinks > 5) {
+            actions.push(`Fix broken links on ${site.siteName}`);
+          }
         }
-      }
-    });
+      });
+    }
 
     const report = {
       timestamp,
@@ -83,9 +94,9 @@ class ReportGenerator {
       warnings,
       actions,
       summary: {
-        ssl: results.ssl,
-        uptime: results.uptime,
-        links: results.links
+        ssl: sslResults,
+        uptime: uptimeResults,
+        links: linksResults
       }
     };
 
@@ -129,39 +140,51 @@ class ReportGenerator {
     lines.push('═══════════════════════════════════════════════════');
     lines.push('🔐 SSL Certificates:');
     lines.push('═══════════════════════════════════════════════════');
-    report.summary.ssl.details.forEach(site => {
-      const icon = site.status === 'ok' ? '✅' : site.status === 'warning' ? '⚠️' : '🔴';
-      if (site.error) {
-        lines.push(`${icon} ${site.siteName}: ${site.error}`);
-      } else {
-        lines.push(`${icon} ${site.siteName}: ${site.daysRemaining} days remaining`);
-      }
-    });
+    if (report.summary.ssl.details && report.summary.ssl.details.length > 0) {
+      report.summary.ssl.details.forEach(site => {
+        const icon = site.status === 'ok' ? '✅' : site.status === 'warning' ? '⚠️' : '🔴';
+        if (site.error) {
+          lines.push(`${icon} ${site.siteName}: ${site.error}`);
+        } else {
+          lines.push(`${icon} ${site.siteName}: ${site.daysRemaining} days remaining`);
+        }
+      });
+    } else {
+      lines.push('No SSL checks performed');
+    }
     lines.push('');
 
     // Uptime Status
     lines.push('═══════════════════════════════════════════════════');
     lines.push('⬆️ Uptime & Performance:');
     lines.push('═══════════════════════════════════════════════════');
-    report.summary.uptime.details.forEach(site => {
-      const icon = site.overallStatus === 'ok' ? '✅' : 
-                   site.overallStatus === 'warning' ? '⚠️' : '🔴';
-      if (site.avgResponseTime) {
-        lines.push(`${icon} ${site.siteName}: ${site.avgResponseTime}ms`);
-      } else {
-        lines.push(`${icon} ${site.siteName}: DOWN`);
-      }
-    });
+    if (report.summary.uptime.details && report.summary.uptime.details.length > 0) {
+      report.summary.uptime.details.forEach(site => {
+        const icon = site.overallStatus === 'ok' ? '✅' : 
+                     site.overallStatus === 'warning' ? '⚠️' : '🔴';
+        if (site.avgResponseTime) {
+          lines.push(`${icon} ${site.siteName}: ${site.avgResponseTime}ms`);
+        } else {
+          lines.push(`${icon} ${site.siteName}: DOWN`);
+        }
+      });
+    } else {
+      lines.push('No uptime checks performed');
+    }
     lines.push('');
 
     // Links Status
     lines.push('═══════════════════════════════════════════════════');
     lines.push('🔗 Broken Links:');
     lines.push('═══════════════════════════════════════════════════');
-    report.summary.links.details.forEach(site => {
-      const icon = site.totalBrokenLinks === 0 ? '✅' : '⚠️';
-      lines.push(`${icon} ${site.siteName}: ${site.totalBrokenLinks} broken`);
-    });
+    if (report.summary.links.details && report.summary.links.details.length > 0) {
+      report.summary.links.details.forEach(site => {
+        const icon = site.totalBrokenLinks === 0 ? '✅' : '⚠️';
+        lines.push(`${icon} ${site.siteName}: ${site.totalBrokenLinks} broken`);
+      });
+    } else {
+      lines.push('No link checks performed');
+    }
     lines.push('');
 
     // Critical Issues
@@ -212,6 +235,10 @@ class ReportGenerator {
   formatHtmlReport(report) {
     const statusColor = report.allHealthy ? '#22c55e' : '#ef4444';
     const statusText = report.allHealthy ? 'All Systems Healthy ✅' : 'Issues Detected 🔴';
+
+    const sslDetails = report.summary.ssl.details || [];
+    const uptimeDetails = report.summary.uptime.details || [];
+    const linksDetails = report.summary.links.details || [];
 
     return `
 <!DOCTYPE html>
@@ -327,38 +354,38 @@ class ReportGenerator {
 
     <div class="section">
       <h2>🔐 SSL Certificates</h2>
-      ${report.summary.ssl.details.map(site => `
+      ${sslDetails.length > 0 ? sslDetails.map(site => `
         <div class="site-item">
           <span>${site.siteName}</span>
           <span class="status-${site.status}">
             ${site.error ? site.error : `${site.daysRemaining} days`}
           </span>
         </div>
-      `).join('')}
+      `).join('') : '<div class="site-item">No SSL checks performed</div>'}
     </div>
 
     <div class="section">
       <h2>⬆️ Uptime & Performance</h2>
-      ${report.summary.uptime.details.map(site => `
+      ${uptimeDetails.length > 0 ? uptimeDetails.map(site => `
         <div class="site-item">
           <span>${site.siteName}</span>
           <span class="status-${site.overallStatus}">
             ${site.avgResponseTime ? `${site.avgResponseTime}ms` : 'DOWN'}
           </span>
         </div>
-      `).join('')}
+      `).join('') : '<div class="site-item">No uptime checks performed</div>'}
     </div>
 
     <div class="section">
       <h2>🔗 Links Health</h2>
-      ${report.summary.links.details.map(site => `
+      ${linksDetails.length > 0 ? linksDetails.map(site => `
         <div class="site-item">
           <span>${site.siteName}</span>
           <span class="${site.totalBrokenLinks === 0 ? 'status-ok' : 'status-warning'}">
             ${site.totalBrokenLinks === 0 ? '✅ All OK' : `⚠️ ${site.totalBrokenLinks} broken`}
           </span>
         </div>
-      `).join('')}
+      `).join('') : '<div class="site-item">No link checks performed</div>'}
     </div>
 
     ${report.criticalIssues.length > 0 ? `
