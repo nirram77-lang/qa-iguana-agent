@@ -1,8 +1,9 @@
 {
   "meta": {
-    "version": "1.0.0",
-    "lastUpdated": "2026-01-05",
-    "owner": "Nir Ram - No Art Gallery"
+    "version": "1.1.0",
+    "lastUpdated": "2026-01-12",
+    "owner": "Nir Ram - No Art Gallery",
+    "notes": "v1.1.0 - Fixed false positives: removed separate SSL check for admin (same domain)"
   },
   "settings": {
     "alertEmail": "nir@noartgallery.com",
@@ -14,10 +15,11 @@
       "evening": "19:00"
     },
     "thresholds": {
-      "responseTimeWarning": 2000,
-      "responseTimeCritical": 5000,
+      "responseTimeWarning": 3000,
+      "responseTimeCritical": 8000,
       "sslExpiryWarning": 30,
-      "sslExpiryCritical": 7
+      "sslExpiryCritical": 7,
+      "requestTimeout": 15000
     }
   },
   "sites": [
@@ -27,7 +29,7 @@
       "url": "https://i4iguana.com",
       "type": "app",
       "priority": "critical",
-      "languages": ["he", "en", "ru", "ar"],
+      "languages": ["he", "en", "pt"],
       "checks": {
         "ssl": true,
         "uptime": true,
@@ -37,33 +39,18 @@
         "screenshots": true
       },
       "pages": [
-        { "path": "/", "name": "Home" },
-        { "path": "/login", "name": "Login" },
-        { "path": "/world-selection", "name": "World Selection" }
+        { "path": "/", "name": "Landing Page" },
+        { "path": "/app", "name": "Main App" },
+        { "path": "/he", "name": "Hebrew Landing" },
+        { "path": "/br", "name": "Portuguese Landing" },
+        { "path": "/admin/super", "name": "Admin Panel" },
+        { "path": "/privacy", "name": "Privacy Policy" },
+        { "path": "/terms", "name": "Terms of Service" }
       ],
       "expectedElements": {
-        "logo": ".iguana-logo, .logo",
+        "logo": ".iguana-logo, .logo, 🦎",
         "navigation": "nav, .nav, .bottom-nav"
       }
-    },
-    {
-      "id": "i4iguana-admin",
-      "name": "I4IGUANA Admin Panel",
-      "url": "https://i4iguana.com/admin",
-      "type": "admin",
-      "priority": "critical",
-      "languages": ["en"],
-      "checks": {
-        "ssl": true,
-        "uptime": true,
-        "links": false,
-        "forms": false,
-        "i18n": false,
-        "screenshots": false
-      },
-      "pages": [
-        { "path": "/", "name": "Admin Dashboard" }
-      ]
     },
     {
       "id": "noartgallery",
