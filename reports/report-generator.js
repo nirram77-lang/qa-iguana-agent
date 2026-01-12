@@ -1,6 +1,7 @@
 /**
  * 🦎 QA Iguana Agent - Report Generator
  * Generates formatted reports from test results
+ * v2.0 - Improved readability and full issue descriptions
  */
 
 class ReportGenerator {
@@ -46,40 +47,88 @@ class ReportGenerator {
     const warnings = [];
     const actions = [];
 
-    // Analyze SSL results
+    // Analyze SSL results with detailed descriptions
     if (sslResults.details && sslResults.details.length > 0) {
       sslResults.details.forEach(site => {
         if (site.status === 'critical') {
-          criticalIssues.push(`🔐 ${site.siteName}: SSL ${site.isExpired ? 'EXPIRED!' : `expires in ${site.daysRemaining} days`}`);
+          const description = site.isExpired 
+            ? `תעודת SSL פגה! האתר לא מאובטח ומשתמשים יראו אזהרה`
+            : `תעודת SSL תפוג בעוד ${site.daysRemaining} ימים - יש לחדש בהקדם`;
+          criticalIssues.push({
+            icon: '🔐',
+            site: site.siteName,
+            issue: site.isExpired ? 'SSL EXPIRED!' : `SSL expires in ${site.daysRemaining} days`,
+            description: description,
+            action: `חדש תעודת SSL עבור ${site.siteName}`,
+            link: site.url
+          });
           actions.push(`Renew SSL certificate for ${site.siteName}`);
         } else if (site.status === 'warning') {
-          warnings.push(`🔐 ${site.siteName}: SSL expires in ${site.daysRemaining} days`);
+          warnings.push({
+            icon: '🔐',
+            site: site.siteName,
+            issue: `SSL expires in ${site.daysRemaining} days`,
+            description: `תעודת SSL תפוג בעוד ${site.daysRemaining} ימים`,
+            link: site.url
+          });
         } else if (site.status === 'error') {
-          criticalIssues.push(`🔐 ${site.siteName}: SSL Error - ${site.error}`);
+          criticalIssues.push({
+            icon: '🔐',
+            site: site.siteName,
+            issue: `SSL Error: ${site.error}`,
+            description: `שגיאה בבדיקת SSL - ${site.error}`,
+            action: `בדוק הגדרות SSL עבור ${site.siteName}`,
+            link: site.url
+          });
           actions.push(`Fix SSL configuration for ${site.siteName}`);
         }
       });
     }
 
-    // Analyze Uptime results
+    // Analyze Uptime results with detailed descriptions
     if (uptimeResults.details && uptimeResults.details.length > 0) {
       uptimeResults.details.forEach(site => {
         if (site.overallStatus === 'down' || site.overallStatus === 'error') {
-          criticalIssues.push(`⬇️ ${site.siteName}: SITE DOWN!`);
+          criticalIssues.push({
+            icon: '⬇️',
+            site: site.siteName,
+            issue: 'SITE DOWN!',
+            description: `האתר לא מגיב! המשתמשים לא יכולים לגשת`,
+            action: `בדוק מיד את ${site.siteName}`,
+            link: site.url
+          });
           actions.push(`Investigate downtime for ${site.siteName}`);
         } else if (site.overallStatus === 'critical') {
-          warnings.push(`🐢 ${site.siteName}: Very slow response (${site.avgResponseTime}ms)`);
+          warnings.push({
+            icon: '🐢',
+            site: site.siteName,
+            issue: `Very slow: ${site.avgResponseTime}ms`,
+            description: `זמן תגובה איטי מאוד - ${site.avgResponseTime}ms`,
+            link: site.url
+          });
         } else if (site.overallStatus === 'warning') {
-          warnings.push(`🐢 ${site.siteName}: Slow response (${site.avgResponseTime}ms)`);
+          warnings.push({
+            icon: '🐢',
+            site: site.siteName,
+            issue: `Slow: ${site.avgResponseTime}ms`,
+            description: `זמן תגובה איטי - ${site.avgResponseTime}ms`,
+            link: site.url
+          });
         }
       });
     }
 
-    // Analyze Link results
+    // Analyze Link results with detailed descriptions
     if (linksResults.details && linksResults.details.length > 0) {
       linksResults.details.forEach(site => {
         if (site.totalBrokenLinks > 0) {
-          warnings.push(`🔗 ${site.siteName}: ${site.totalBrokenLinks} broken link(s)`);
+          warnings.push({
+            icon: '🔗',
+            site: site.siteName,
+            issue: `${site.totalBrokenLinks} broken link(s)`,
+            description: `נמצאו ${site.totalBrokenLinks} לינקים שבורים באתר`,
+            link: site.url
+          });
           if (site.totalBrokenLinks > 5) {
             actions.push(`Fix broken links on ${site.siteName}`);
           }
@@ -187,26 +236,31 @@ class ReportGenerator {
     }
     lines.push('');
 
-    // Critical Issues
+    // Critical Issues - DETAILED
     if (report.criticalIssues.length > 0) {
       lines.push('═══════════════════════════════════════════════════');
       lines.push('🚨 בעיות קריטיות:');
       lines.push('═══════════════════════════════════════════════════');
       report.criticalIssues.forEach((issue, i) => {
-        lines.push(`${i + 1}. ${issue}`);
+        lines.push(`${i + 1}. ${issue.icon} ${issue.site}: ${issue.issue}`);
+        lines.push(`   📝 ${issue.description}`);
+        if (issue.action) {
+          lines.push(`   🔧 ${issue.action}`);
+        }
+        lines.push('');
       });
-      lines.push('');
     }
 
-    // Warnings
+    // Warnings - DETAILED
     if (report.warnings.length > 0) {
       lines.push('═══════════════════════════════════════════════════');
       lines.push('⚠️ אזהרות:');
       lines.push('═══════════════════════════════════════════════════');
       report.warnings.forEach((warning, i) => {
-        lines.push(`${i + 1}. ${warning}`);
+        lines.push(`${i + 1}. ${warning.icon} ${warning.site}: ${warning.issue}`);
+        lines.push(`   📝 ${warning.description}`);
+        lines.push('');
       });
-      lines.push('');
     }
 
     // Required Actions
@@ -228,7 +282,7 @@ class ReportGenerator {
   }
 
   /**
-   * Format report as HTML
+   * Format report as HTML - IMPROVED v2.0
    * @param {object} report - Report data
    * @returns {string} HTML report
    */
@@ -259,7 +313,7 @@ class ReportGenerator {
     .container {
       max-width: 800px;
       margin: 0 auto;
-      background: rgba(10, 31, 26, 0.9);
+      background: rgba(10, 31, 26, 0.95);
       border-radius: 16px;
       padding: 30px;
       box-shadow: 0 10px 40px rgba(0,0,0,0.3);
@@ -289,6 +343,7 @@ class ReportGenerator {
       text-align: center;
       font-weight: bold;
       margin-bottom: 20px;
+      font-size: 18px;
     }
     .section {
       background: rgba(26, 64, 53, 0.5);
@@ -308,27 +363,103 @@ class ReportGenerator {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 10px 0;
+      padding: 12px 0;
       border-bottom: 1px solid rgba(245, 245, 220, 0.1);
     }
     .site-item:last-child { border-bottom: none; }
-    .status-ok { color: #22c55e; }
-    .status-warning { color: #f59e0b; }
-    .status-critical { color: #ef4444; }
-    .issue-list {
+    .site-name {
+      color: #f5f5dc;
+      font-weight: 500;
+    }
+    .status-ok { color: #22c55e; font-weight: bold; }
+    .status-warning { color: #f59e0b; font-weight: bold; }
+    .status-critical { color: #ef4444; font-weight: bold; }
+    .status-error { color: #ef4444; font-weight: bold; }
+    .status-down { color: #ef4444; font-weight: bold; }
+    
+    /* ✅ IMPROVED: Critical Issues with full visible text */
+    .issue-card {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+    .issue-card.warning {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: rgba(245, 158, 11, 0.4);
+    }
+    .issue-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .issue-icon {
+      font-size: 24px;
+    }
+    .issue-site {
+      color: #ffd700;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    .issue-title {
+      color: #ef4444;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .issue-card.warning .issue-title {
+      color: #f59e0b;
+    }
+    .issue-description {
+      color: #f5f5dc;
+      font-size: 14px;
+      margin: 10px 0;
+      padding: 10px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 6px;
+      line-height: 1.5;
+    }
+    .issue-action {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #22c55e;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    .issue-link {
+      color: #4ade80;
+      text-decoration: underline;
+      font-size: 12px;
+    }
+    
+    .action-list {
       list-style: none;
       padding: 0;
       margin: 0;
     }
-    .issue-list li {
-      padding: 10px;
-      margin: 5px 0;
-      background: rgba(0,0,0,0.2);
-      border-radius: 6px;
-      border-right: 3px solid #ef4444;
+    .action-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      margin: 8px 0;
+      background: rgba(34, 197, 94, 0.15);
+      border-radius: 8px;
+      border-right: 4px solid #22c55e;
     }
-    .warning-list li {
-      border-right-color: #f59e0b;
+    .action-number {
+      background: #22c55e;
+      color: #0a1f1a;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 12px;
     }
     .footer {
       text-align: center;
@@ -336,6 +467,21 @@ class ReportGenerator {
       padding-top: 20px;
       border-top: 1px solid rgba(205, 127, 50, 0.3);
       color: rgba(245, 245, 220, 0.5);
+      font-size: 12px;
+    }
+    .quick-links {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 15px;
+      flex-wrap: wrap;
+    }
+    .quick-link {
+      background: rgba(74, 222, 128, 0.2);
+      color: #4ade80;
+      padding: 8px 16px;
+      border-radius: 20px;
+      text-decoration: none;
       font-size: 12px;
     }
   </style>
@@ -352,71 +498,118 @@ class ReportGenerator {
       ${statusText}
     </div>
 
+    <!-- SSL Certificates -->
     <div class="section">
       <h2>🔐 SSL Certificates</h2>
       ${sslDetails.length > 0 ? sslDetails.map(site => `
         <div class="site-item">
-          <span>${site.siteName}</span>
+          <span class="site-name">${site.siteName}</span>
           <span class="status-${site.status}">
             ${site.error ? site.error : `${site.daysRemaining} days`}
           </span>
         </div>
-      `).join('') : '<div class="site-item">No SSL checks performed</div>'}
+      `).join('') : '<div class="site-item"><span>No SSL checks performed</span></div>'}
     </div>
 
+    <!-- Uptime & Performance -->
     <div class="section">
       <h2>⬆️ Uptime & Performance</h2>
       ${uptimeDetails.length > 0 ? uptimeDetails.map(site => `
         <div class="site-item">
-          <span>${site.siteName}</span>
+          <span class="site-name">${site.siteName}</span>
           <span class="status-${site.overallStatus}">
             ${site.avgResponseTime ? `${site.avgResponseTime}ms` : 'DOWN'}
           </span>
         </div>
-      `).join('') : '<div class="site-item">No uptime checks performed</div>'}
+      `).join('') : '<div class="site-item"><span>No uptime checks performed</span></div>'}
     </div>
 
+    <!-- Links Health -->
     <div class="section">
       <h2>🔗 Links Health</h2>
       ${linksDetails.length > 0 ? linksDetails.map(site => `
         <div class="site-item">
-          <span>${site.siteName}</span>
+          <span class="site-name">${site.siteName}</span>
           <span class="${site.totalBrokenLinks === 0 ? 'status-ok' : 'status-warning'}">
             ${site.totalBrokenLinks === 0 ? '✅ All OK' : `⚠️ ${site.totalBrokenLinks} broken`}
           </span>
         </div>
-      `).join('') : '<div class="site-item">No link checks performed</div>'}
+      `).join('') : '<div class="site-item"><span>No link checks performed</span></div>'}
     </div>
 
+    <!-- ✅ IMPROVED: Critical Issues with full details -->
     ${report.criticalIssues.length > 0 ? `
     <div class="section">
       <h2>🚨 Critical Issues</h2>
-      <ul class="issue-list">
-        ${report.criticalIssues.map(issue => `<li>${issue}</li>`).join('')}
-      </ul>
+      ${report.criticalIssues.map(issue => `
+        <div class="issue-card">
+          <div class="issue-header">
+            <span class="issue-icon">${issue.icon}</span>
+            <span class="issue-site">${issue.site}</span>
+          </div>
+          <div class="issue-title">${issue.issue}</div>
+          <div class="issue-description">
+            📝 ${issue.description}
+          </div>
+          ${issue.action ? `
+          <div class="issue-action">
+            🔧 <strong>פעולה נדרשת:</strong> ${issue.action}
+          </div>
+          ` : ''}
+          ${issue.link ? `
+          <a href="${issue.link}" class="issue-link" target="_blank">🔗 פתח אתר</a>
+          ` : ''}
+        </div>
+      `).join('')}
     </div>
     ` : ''}
 
+    <!-- ✅ IMPROVED: Warnings with full details -->
     ${report.warnings.length > 0 ? `
     <div class="section">
       <h2>⚠️ Warnings</h2>
-      <ul class="issue-list warning-list">
-        ${report.warnings.map(warning => `<li>${warning}</li>`).join('')}
-      </ul>
+      ${report.warnings.map(warning => `
+        <div class="issue-card warning">
+          <div class="issue-header">
+            <span class="issue-icon">${warning.icon}</span>
+            <span class="issue-site">${warning.site}</span>
+          </div>
+          <div class="issue-title">${warning.issue}</div>
+          <div class="issue-description">
+            📝 ${warning.description}
+          </div>
+          ${warning.link ? `
+          <a href="${warning.link}" class="issue-link" target="_blank">🔗 פתח אתר</a>
+          ` : ''}
+        </div>
+      `).join('')}
     </div>
     ` : ''}
 
+    <!-- Required Actions -->
     ${report.actions.length > 0 ? `
     <div class="section">
       <h2>📋 Required Actions</h2>
-      <ul class="issue-list">
-        ${report.actions.map((action, i) => `<li>${i + 1}. ${action}</li>`).join('')}
+      <ul class="action-list">
+        ${report.actions.map((action, i) => `
+          <li class="action-item">
+            <span class="action-number">${i + 1}</span>
+            <span>${action}</span>
+          </li>
+        `).join('')}
       </ul>
     </div>
     ` : ''}
 
+    <!-- Quick Links -->
+    <div class="quick-links">
+      <a href="https://i4iguana.com/admin/super" class="quick-link">🦎 Admin Panel</a>
+      <a href="https://vercel.com/dashboard" class="quick-link">▲ Vercel</a>
+      <a href="https://console.firebase.google.com" class="quick-link">🔥 Firebase</a>
+    </div>
+
     <div class="footer">
-      🦎 QA Iguana Agent - "שומר על האימפריה 24/7"<br>
+      🦎 QA Iguana Agent v2.0 - "שומר על האימפריה 24/7"<br>
       No Art Gallery © 2026
     </div>
   </div>
