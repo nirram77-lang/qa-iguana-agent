@@ -1,9 +1,9 @@
 {
   "meta": {
-    "version": "1.1.0",
-    "lastUpdated": "2026-01-12",
+    "version": "1.2.0",
+    "lastUpdated": "2026-02-08",
     "owner": "Nir Ram - No Art Gallery",
-    "notes": "v1.1.0 - Fixed false positives: removed separate SSL check for admin (same domain)"
+    "notes": "v1.2.0 - Added SOS Click monitoring + GitHub Actions links"
   },
   "settings": {
     "alertEmail": "nir@noartgallery.com",
@@ -20,6 +20,11 @@
       "sslExpiryWarning": 30,
       "sslExpiryCritical": 7,
       "requestTimeout": 15000
+    },
+    "github": {
+      "owner": "nirram77-lang",
+      "repo": "qa-iguana-agent",
+      "actionsUrl": "https://github.com/nirram77-lang/qa-iguana-agent/actions"
     }
   },
   "sites": [
@@ -50,6 +55,54 @@
       "expectedElements": {
         "logo": ".iguana-logo, .logo, 🦎",
         "navigation": "nav, .nav, .bottom-nav"
+      }
+    },
+    {
+      "id": "sosclick-app",
+      "name": "SOS Click App",
+      "url": "https://app.sosclick.app",
+      "type": "app",
+      "priority": "critical",
+      "languages": ["he", "en"],
+      "checks": {
+        "ssl": true,
+        "uptime": true,
+        "links": true,
+        "forms": false,
+        "i18n": true,
+        "screenshots": true
+      },
+      "pages": [
+        { "path": "/", "name": "Main App" }
+      ],
+      "expectedElements": {
+        "sosButton": ".sos-button, #sos-btn",
+        "navigation": "nav, .bottom-nav"
+      }
+    },
+    {
+      "id": "sosclick-website",
+      "name": "SOS Click Website",
+      "url": "https://sosclick.app",
+      "type": "website",
+      "priority": "critical",
+      "languages": ["he", "en"],
+      "checks": {
+        "ssl": true,
+        "uptime": true,
+        "links": true,
+        "forms": false,
+        "i18n": false,
+        "screenshots": true
+      },
+      "pages": [
+        { "path": "/", "name": "Landing Page" },
+        { "path": "/privacy", "name": "Privacy Policy" },
+        { "path": "/terms", "name": "Terms of Service" }
+      ],
+      "expectedElements": {
+        "cta": ".cta-button, .download-btn",
+        "features": ".features, .feature-list"
       }
     },
     {
@@ -140,6 +193,14 @@
     {
       "name": "here-4-iguana",
       "domains": ["i4iguana.com", "www.i4iguana.com", "here-4-iguana.vercel.app"]
+    },
+    {
+      "name": "sos-click",
+      "domains": ["app.sosclick.app"]
+    },
+    {
+      "name": "sosclick-wow",
+      "domains": ["sosclick.app"]
     },
     {
       "name": "noartgallery-website",
