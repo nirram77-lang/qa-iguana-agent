@@ -1,621 +1,416 @@
 /**
  * 🦎 QA Iguana Agent - Report Generator
- * Generates formatted reports from test results
- * v2.0 - Improved readability and full issue descriptions
+ * Enhanced v1.3.0 - Detailed timestamps, direct links, downtime tracking
  */
 
 class ReportGenerator {
   constructor(options = {}) {
     this.timezone = options.timezone || 'Asia/Jerusalem';
+    this.actionsUrl = options.actionsUrl || null;
+    this.runId = options.runId || null;
+    this.runNumber = options.runNumber || null;
+    this.checkTime = options.checkTime || new Date();
   }
 
   /**
-   * Get current timestamp in configured timezone
-   * @returns {string} Formatted timestamp
+   * Format date for display
    */
-  getTimestamp() {
-    return new Date().toLocaleString('he-IL', { 
+  formatDate(date = new Date()) {
+    return date.toLocaleString('he-IL', { 
       timeZone: this.timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
+      dateStyle: 'full',
+      timeStyle: 'medium'
     });
   }
 
   /**
-   * Generate full morning report
-   * @param {object} results - All test results
-   * @returns {object} Report in multiple formats
+   * Format time only
+   */
+  formatTime(date = new Date()) {
+    return date.toLocaleString('he-IL', { 
+      timeZone: this.timezone,
+      timeStyle: 'medium'
+    });
+  }
+
+  /**
+   * Generate GitHub Actions direct link
+   */
+  getActionsLink() {
+    if (this.runId) {
+      return `https://github.com/nirram77-lang/qa-iguana-agent/actions/runs/${this.runId}`;
+    }
+    return 'https://github.com/nirram77-lang/qa-iguana-agent/actions';
+  }
+
+  /**
+   * Generate morning report in multiple formats
    */
   generateMorningReport(results) {
-    const timestamp = this.getTimestamp();
+    const hasIssues = this.hasAnyIssues(results);
     
-    // Safely check if results exist
-    const sslResults = results.ssl || { allHealthy: true, details: [] };
-    const uptimeResults = results.uptime || { allHealthy: true, details: [] };
-    const linksResults = results.links || { allHealthy: true, details: [] };
-    
-    // Calculate overall health
-    const allHealthy = 
-      sslResults.allHealthy && 
-      uptimeResults.allHealthy && 
-      linksResults.allHealthy;
-
-    const criticalIssues = [];
-    const warnings = [];
-    const actions = [];
-
-    // Analyze SSL results with detailed descriptions
-    if (sslResults.details && sslResults.details.length > 0) {
-      sslResults.details.forEach(site => {
-        if (site.status === 'critical') {
-          const description = site.isExpired 
-            ? `תעודת SSL פגה! האתר לא מאובטח ומשתמשים יראו אזהרה`
-            : `תעודת SSL תפוג בעוד ${site.daysRemaining} ימים - יש לחדש בהקדם`;
-          criticalIssues.push({
-            icon: '🔐',
-            site: site.siteName,
-            issue: site.isExpired ? 'SSL EXPIRED!' : `SSL expires in ${site.daysRemaining} days`,
-            description: description,
-            action: `חדש תעודת SSL עבור ${site.siteName}`,
-            link: site.url
-          });
-          actions.push(`Renew SSL certificate for ${site.siteName}`);
-        } else if (site.status === 'warning') {
-          warnings.push({
-            icon: '🔐',
-            site: site.siteName,
-            issue: `SSL expires in ${site.daysRemaining} days`,
-            description: `תעודת SSL תפוג בעוד ${site.daysRemaining} ימים`,
-            link: site.url
-          });
-        } else if (site.status === 'error') {
-          criticalIssues.push({
-            icon: '🔐',
-            site: site.siteName,
-            issue: `SSL Error: ${site.error}`,
-            description: `שגיאה בבדיקת SSL - ${site.error}`,
-            action: `בדוק הגדרות SSL עבור ${site.siteName}`,
-            link: site.url
-          });
-          actions.push(`Fix SSL configuration for ${site.siteName}`);
-        }
-      });
-    }
-
-    // Analyze Uptime results with detailed descriptions
-    if (uptimeResults.details && uptimeResults.details.length > 0) {
-      uptimeResults.details.forEach(site => {
-        if (site.overallStatus === 'down' || site.overallStatus === 'error') {
-          criticalIssues.push({
-            icon: '⬇️',
-            site: site.siteName,
-            issue: 'SITE DOWN!',
-            description: `האתר לא מגיב! המשתמשים לא יכולים לגשת`,
-            action: `בדוק מיד את ${site.siteName}`,
-            link: site.url
-          });
-          actions.push(`Investigate downtime for ${site.siteName}`);
-        } else if (site.overallStatus === 'critical') {
-          warnings.push({
-            icon: '🐢',
-            site: site.siteName,
-            issue: `Very slow: ${site.avgResponseTime}ms`,
-            description: `זמן תגובה איטי מאוד - ${site.avgResponseTime}ms`,
-            link: site.url
-          });
-        } else if (site.overallStatus === 'warning') {
-          warnings.push({
-            icon: '🐢',
-            site: site.siteName,
-            issue: `Slow: ${site.avgResponseTime}ms`,
-            description: `זמן תגובה איטי - ${site.avgResponseTime}ms`,
-            link: site.url
-          });
-        }
-      });
-    }
-
-    // Analyze Link results with detailed descriptions
-    if (linksResults.details && linksResults.details.length > 0) {
-      linksResults.details.forEach(site => {
-        if (site.totalBrokenLinks > 0) {
-          warnings.push({
-            icon: '🔗',
-            site: site.siteName,
-            issue: `${site.totalBrokenLinks} broken link(s)`,
-            description: `נמצאו ${site.totalBrokenLinks} לינקים שבורים באתר`,
-            link: site.url
-          });
-          if (site.totalBrokenLinks > 5) {
-            actions.push(`Fix broken links on ${site.siteName}`);
-          }
-        }
-      });
-    }
-
-    const report = {
-      timestamp,
-      allHealthy,
-      criticalIssues,
-      warnings,
-      actions,
-      summary: {
-        ssl: sslResults,
-        uptime: uptimeResults,
-        links: linksResults
-      }
-    };
-
     return {
-      data: report,
-      text: this.formatTextReport(report),
-      html: this.formatHtmlReport(report),
-      json: JSON.stringify(report, null, 2)
+      text: this.generateTextReport(results, hasIssues),
+      html: this.generateHtmlReport(results, hasIssues),
+      json: this.generateJsonReport(results, hasIssues),
+      hasIssues: hasIssues
     };
   }
 
   /**
-   * Format report as plain text
-   * @param {object} report - Report data
-   * @returns {string} Plain text report
+   * Check if there are any issues
    */
-  formatTextReport(report) {
-    const lines = [];
-    
-    lines.push('═══════════════════════════════════════════════════');
-    lines.push('🦎 QA IGUANA - דו"ח בוקר יומי');
-    lines.push(`📅 ${report.timestamp}`);
-    lines.push('═══════════════════════════════════════════════════');
-    lines.push('');
-    
-    // Quick summary
-    lines.push('📊 סיכום מהיר:');
-    if (report.allHealthy) {
-      lines.push('✅ כל המערכות תקינות!');
-    } else {
-      if (report.criticalIssues.length > 0) {
-        lines.push(`🔴 ${report.criticalIssues.length} בעיות קריטיות`);
-      }
-      if (report.warnings.length > 0) {
-        lines.push(`⚠️ ${report.warnings.length} אזהרות`);
-      }
-    }
-    lines.push('');
-
-    // SSL Status
-    lines.push('═══════════════════════════════════════════════════');
-    lines.push('🔐 SSL Certificates:');
-    lines.push('═══════════════════════════════════════════════════');
-    if (report.summary.ssl.details && report.summary.ssl.details.length > 0) {
-      report.summary.ssl.details.forEach(site => {
-        const icon = site.status === 'ok' ? '✅' : site.status === 'warning' ? '⚠️' : '🔴';
-        if (site.error) {
-          lines.push(`${icon} ${site.siteName}: ${site.error}`);
-        } else {
-          lines.push(`${icon} ${site.siteName}: ${site.daysRemaining} days remaining`);
-        }
-      });
-    } else {
-      lines.push('No SSL checks performed');
-    }
-    lines.push('');
-
-    // Uptime Status
-    lines.push('═══════════════════════════════════════════════════');
-    lines.push('⬆️ Uptime & Performance:');
-    lines.push('═══════════════════════════════════════════════════');
-    if (report.summary.uptime.details && report.summary.uptime.details.length > 0) {
-      report.summary.uptime.details.forEach(site => {
-        const icon = site.overallStatus === 'ok' ? '✅' : 
-                     site.overallStatus === 'warning' ? '⚠️' : '🔴';
-        if (site.avgResponseTime) {
-          lines.push(`${icon} ${site.siteName}: ${site.avgResponseTime}ms`);
-        } else {
-          lines.push(`${icon} ${site.siteName}: DOWN`);
-        }
-      });
-    } else {
-      lines.push('No uptime checks performed');
-    }
-    lines.push('');
-
-    // Links Status
-    lines.push('═══════════════════════════════════════════════════');
-    lines.push('🔗 Broken Links:');
-    lines.push('═══════════════════════════════════════════════════');
-    if (report.summary.links.details && report.summary.links.details.length > 0) {
-      report.summary.links.details.forEach(site => {
-        const icon = site.totalBrokenLinks === 0 ? '✅' : '⚠️';
-        lines.push(`${icon} ${site.siteName}: ${site.totalBrokenLinks} broken`);
-      });
-    } else {
-      lines.push('No link checks performed');
-    }
-    lines.push('');
-
-    // Critical Issues - DETAILED
-    if (report.criticalIssues.length > 0) {
-      lines.push('═══════════════════════════════════════════════════');
-      lines.push('🚨 בעיות קריטיות:');
-      lines.push('═══════════════════════════════════════════════════');
-      report.criticalIssues.forEach((issue, i) => {
-        lines.push(`${i + 1}. ${issue.icon} ${issue.site}: ${issue.issue}`);
-        lines.push(`   📝 ${issue.description}`);
-        if (issue.action) {
-          lines.push(`   🔧 ${issue.action}`);
-        }
-        lines.push('');
-      });
-    }
-
-    // Warnings - DETAILED
-    if (report.warnings.length > 0) {
-      lines.push('═══════════════════════════════════════════════════');
-      lines.push('⚠️ אזהרות:');
-      lines.push('═══════════════════════════════════════════════════');
-      report.warnings.forEach((warning, i) => {
-        lines.push(`${i + 1}. ${warning.icon} ${warning.site}: ${warning.issue}`);
-        lines.push(`   📝 ${warning.description}`);
-        lines.push('');
-      });
-    }
-
-    // Required Actions
-    if (report.actions.length > 0) {
-      lines.push('═══════════════════════════════════════════════════');
-      lines.push('📋 פעולות נדרשות:');
-      lines.push('═══════════════════════════════════════════════════');
-      report.actions.forEach((action, i) => {
-        lines.push(`${i + 1}. ${action}`);
-      });
-      lines.push('');
-    }
-
-    lines.push('═══════════════════════════════════════════════════');
-    lines.push('🦎 QA Iguana - "שומר על האימפריה 24/7"');
-    lines.push('═══════════════════════════════════════════════════');
-
-    return lines.join('\n');
+  hasAnyIssues(results) {
+    if (results.ssl && !results.ssl.allHealthy) return true;
+    if (results.uptime && !results.uptime.allHealthy) return true;
+    if (results.links && !results.links.allHealthy) return true;
+    return false;
   }
 
   /**
-   * Format report as HTML - IMPROVED v2.0
-   * @param {object} report - Report data
-   * @returns {string} HTML report
+   * Generate plain text report
    */
-  formatHtmlReport(report) {
-    const statusColor = report.allHealthy ? '#22c55e' : '#ef4444';
-    const statusText = report.allHealthy ? 'All Systems Healthy ✅' : 'Issues Detected 🔴';
+  generateTextReport(results, hasIssues) {
+    let report = [];
+    
+    report.push('═'.repeat(60));
+    report.push('🦎 QA IGUANA AGENT - DAILY REPORT');
+    report.push('═'.repeat(60));
+    report.push(`📅 ${this.formatDate()}`);
+    report.push(`⏰ בדיקה בוצעה בשעה: ${this.formatTime(this.checkTime)}`);
+    if (this.runNumber) {
+      report.push(`🔢 Run #${this.runNumber}`);
+    }
+    report.push(`📋 לוגים מלאים: ${this.getActionsLink()}`);
+    report.push('');
+    
+    // Overall status
+    if (hasIssues) {
+      report.push('⚠️ STATUS: נמצאו בעיות - פרטים מלאים בלינק למעלה');
+    } else {
+      report.push('✅ STATUS: הכל תקין');
+    }
+    report.push('');
+    
+    // SSL Results
+    if (results.ssl) {
+      report.push('─'.repeat(60));
+      report.push('🔐 תעודות SSL');
+      report.push('─'.repeat(60));
+      
+      if (results.ssl.details && results.ssl.details.length > 0) {
+        results.ssl.details.forEach(item => {
+          const status = item.healthy ? '✅' : (item.warning ? '⚠️' : '❌');
+          report.push(`${status} ${item.name}`);
+          report.push(`   כתובת: ${item.url}`);
+          report.push(`   נבדק בשעה: ${this.formatTime(item.checkedAt || this.checkTime)}`);
+          
+          if (item.daysUntilExpiry !== undefined) {
+            report.push(`   תפוגה בעוד: ${item.daysUntilExpiry} ימים`);
+            if (item.expiryDate) {
+              report.push(`   תאריך תפוגה: ${item.expiryDate}`);
+            }
+          }
+          
+          if (item.error) {
+            report.push(`   ❌ שגיאה: ${item.error}`);
+            report.push(`   📋 לוג מלא: ${this.getActionsLink()}`);
+          }
+          
+          // How to fix
+          if (!item.healthy || item.warning) {
+            report.push(`   🔧 לתיקון: Vercel → Settings → Domains → Refresh SSL`);
+          }
+          
+          report.push('');
+        });
+      } else {
+        report.push('   אין נתונים');
+        report.push('');
+      }
+    }
+    
+    // Uptime Results
+    if (results.uptime) {
+      report.push('─'.repeat(60));
+      report.push('⬆️ זמינות ומהירות');
+      report.push('─'.repeat(60));
+      
+      if (results.uptime.details && results.uptime.details.length > 0) {
+        results.uptime.details.forEach(item => {
+          const status = item.healthy ? '✅' : '❌';
+          report.push(`${status} ${item.name}`);
+          report.push(`   כתובת: ${item.url}`);
+          report.push(`   נבדק בשעה: ${this.formatTime(item.checkedAt || this.checkTime)}`);
+          report.push(`   סטטוס HTTP: ${item.statusCode || 'N/A'}`);
+          report.push(`   זמן תגובה: ${item.responseTime || 'N/A'}ms`);
+          
+          if (item.error) {
+            report.push(`   ❌ שגיאה: ${item.error}`);
+          }
+          
+          if (!item.healthy) {
+            report.push(`   🚨 האתר לא הגיב בזמן הבדיקה!`);
+            report.push(`   📋 לוג מלא: ${this.getActionsLink()}`);
+            report.push(`   🔧 לתיקון: בדוק Vercel Dashboard או הרץ npm run build`);
+          }
+          
+          report.push('');
+        });
+      } else {
+        report.push('   אין נתונים');
+        report.push('');
+      }
+    }
+    
+    // Link Validation Results
+    if (results.links) {
+      report.push('─'.repeat(60));
+      report.push('🔗 לינקים שבורים');
+      report.push('─'.repeat(60));
+      
+      if (results.links.details && results.links.details.length > 0) {
+        results.links.details.forEach(item => {
+          const status = item.healthy ? '✅' : '❌';
+          report.push(`${status} ${item.name}`);
+          report.push(`   כתובת: ${item.url}`);
+          report.push(`   נבדק בשעה: ${this.formatTime(item.checkedAt || this.checkTime)}`);
+          
+          if (item.brokenLinks && item.brokenLinks.length > 0) {
+            report.push(`   ⚠️ נמצאו ${item.brokenLinks.length} לינקים שבורים:`);
+            item.brokenLinks.forEach((link, index) => {
+              report.push('');
+              report.push(`   [${index + 1}] לינק שבור:`);
+              report.push(`       🔗 URL: ${link.href}`);
+              report.push(`       📄 נמצא בעמוד: ${link.foundOnPage || item.url}`);
+              report.push(`       📝 טקסט: "${link.text || 'ללא טקסט'}"`);
+              report.push(`       🔢 סטטוס HTTP: ${link.statusCode || 'לא זמין'}`);
+              if (link.error) {
+                report.push(`       ❌ שגיאה: ${link.error}`);
+              }
+              report.push(`       📋 לוג מלא: ${this.getActionsLink()}`);
+            });
+          } else if (item.healthy) {
+            report.push(`   ✓ כל הלינקים תקינים`);
+          }
+          
+          report.push('');
+        });
+      } else {
+        report.push('   אין נתונים');
+        report.push('');
+      }
+    }
+    
+    // Footer
+    report.push('═'.repeat(60));
+    report.push(`📋 לוגים מלאים: ${this.getActionsLink()}`);
+    report.push('🦎 QA Iguana Agent v1.3.0 - "שומר על האימפריה 24/7"');
+    report.push('No Art Gallery © 2026');
+    report.push('═'.repeat(60));
+    
+    return report.join('\n');
+  }
 
-    const sslDetails = report.summary.ssl.details || [];
-    const uptimeDetails = report.summary.uptime.details || [];
-    const linksDetails = report.summary.links.details || [];
-
-    return `
+  /**
+   * Generate HTML report for email
+   */
+  generateHtmlReport(results, hasIssues) {
+    const statusColor = hasIssues ? '#ff6b6b' : '#51cf66';
+    const statusText = hasIssues ? '⚠️ נמצאו בעיות' : '✅ הכל תקין';
+    
+    let html = `
 <!DOCTYPE html>
 <html dir="rtl" lang="he">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QA Iguana - Daily Report</title>
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #0a1f1a 0%, #1a4035 100%);
-      color: #f5f5dc;
-      padding: 20px;
-      margin: 0;
-      min-height: 100vh;
-    }
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      background: rgba(10, 31, 26, 0.95);
-      border-radius: 16px;
-      padding: 30px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-      border: 1px solid rgba(205, 127, 50, 0.3);
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 30px;
-      padding-bottom: 20px;
-      border-bottom: 2px solid rgba(205, 127, 50, 0.3);
-    }
-    .logo { font-size: 48px; margin-bottom: 10px; }
-    h1 {
-      color: #ffd700;
-      margin: 10px 0;
-      font-size: 24px;
-    }
-    .timestamp {
-      color: rgba(245, 245, 220, 0.7);
-      font-size: 14px;
-    }
-    .status-banner {
-      background: ${statusColor};
-      color: white;
-      padding: 15px;
-      border-radius: 8px;
-      text-align: center;
-      font-weight: bold;
-      margin-bottom: 20px;
-      font-size: 18px;
-    }
-    .section {
-      background: rgba(26, 64, 53, 0.5);
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 20px;
-    }
-    .section h2 {
-      color: #cd7f32;
-      margin-top: 0;
-      font-size: 18px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .site-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px solid rgba(245, 245, 220, 0.1);
-    }
-    .site-item:last-child { border-bottom: none; }
-    .site-name {
-      color: #f5f5dc;
-      font-weight: 500;
-    }
-    .status-ok { color: #22c55e; font-weight: bold; }
-    .status-warning { color: #f59e0b; font-weight: bold; }
-    .status-critical { color: #ef4444; font-weight: bold; }
-    .status-error { color: #ef4444; font-weight: bold; }
-    .status-down { color: #ef4444; font-weight: bold; }
-    
-    /* ✅ IMPROVED: Critical Issues with full visible text */
-    .issue-card {
-      background: rgba(239, 68, 68, 0.15);
-      border: 1px solid rgba(239, 68, 68, 0.4);
-      border-radius: 10px;
-      padding: 15px;
-      margin-bottom: 15px;
-    }
-    .issue-card.warning {
-      background: rgba(245, 158, 11, 0.15);
-      border-color: rgba(245, 158, 11, 0.4);
-    }
-    .issue-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    .issue-icon {
-      font-size: 24px;
-    }
-    .issue-site {
-      color: #ffd700;
-      font-weight: bold;
-      font-size: 16px;
-    }
-    .issue-title {
-      color: #ef4444;
-      font-weight: bold;
-      font-size: 14px;
-    }
-    .issue-card.warning .issue-title {
-      color: #f59e0b;
-    }
-    .issue-description {
-      color: #f5f5dc;
-      font-size: 14px;
-      margin: 10px 0;
-      padding: 10px;
-      background: rgba(0,0,0,0.2);
-      border-radius: 6px;
-      line-height: 1.5;
-    }
-    .issue-action {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: #22c55e;
-      font-size: 13px;
-      margin-top: 10px;
-    }
-    .issue-link {
-      color: #4ade80;
-      text-decoration: underline;
-      font-size: 12px;
-    }
-    
-    .action-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-    .action-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px;
-      margin: 8px 0;
-      background: rgba(34, 197, 94, 0.15);
-      border-radius: 8px;
-      border-right: 4px solid #22c55e;
-    }
-    .action-number {
-      background: #22c55e;
-      color: #0a1f1a;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      font-size: 12px;
-    }
-    .footer {
-      text-align: center;
-      margin-top: 30px;
-      padding-top: 20px;
-      border-top: 1px solid rgba(205, 127, 50, 0.3);
-      color: rgba(245, 245, 220, 0.5);
-      font-size: 12px;
-    }
-    .quick-links {
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-      margin-top: 15px;
-      flex-wrap: wrap;
-    }
-    .quick-link {
-      background: rgba(74, 222, 128, 0.2);
-      color: #4ade80;
-      padding: 8px 16px;
-      border-radius: 20px;
-      text-decoration: none;
-      font-size: 12px;
-    }
+    body { font-family: Arial, sans-serif; background: #1a2d47; color: #fff; padding: 20px; direction: rtl; }
+    .container { max-width: 600px; margin: 0 auto; background: #243b55; border-radius: 12px; padding: 24px; }
+    .header { text-align: center; margin-bottom: 24px; }
+    .logo { font-size: 48px; }
+    .title { font-size: 24px; color: #4ade80; margin: 8px 0; }
+    .date { color: #888; font-size: 14px; }
+    .run-id { color: #666; font-size: 12px; }
+    .status-box { background: ${statusColor}22; border: 2px solid ${statusColor}; border-radius: 8px; padding: 16px; text-align: center; margin: 16px 0; }
+    .status-text { font-size: 20px; font-weight: bold; color: ${statusColor}; }
+    .section { background: #1a2d47; border-radius: 8px; padding: 16px; margin: 16px 0; }
+    .section-title { font-size: 18px; color: #ff8c00; margin-bottom: 12px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .item { background: #243b55; border-radius: 6px; padding: 12px; margin: 8px 0; }
+    .item-name { font-weight: bold; color: #fff; }
+    .item-url { color: #888; font-size: 12px; word-break: break-all; }
+    .item-detail { color: #ccc; font-size: 13px; margin: 4px 0; }
+    .healthy { border-right: 4px solid #51cf66; }
+    .warning { border-right: 4px solid #ffd43b; }
+    .error { border-right: 4px solid #ff6b6b; }
+    .broken-link { background: #ff6b6b22; border-radius: 4px; padding: 10px; margin: 8px 0; font-size: 12px; border-right: 3px solid #ff6b6b; }
+    .broken-link-title { color: #ff6b6b; font-weight: bold; margin-bottom: 4px; }
+    .broken-link-url { color: #ff6b6b; word-break: break-all; font-family: monospace; }
+    .broken-link-detail { color: #ccc; margin: 2px 0; }
+    .fix-hint { background: #4ade8022; border-radius: 4px; padding: 8px; margin-top: 8px; font-size: 12px; color: #4ade80; }
+    .logs-link { display: inline-block; background: #ff8c00; color: #fff; padding: 8px 16px; border-radius: 6px; text-decoration: none; margin-top: 8px; font-size: 13px; }
+    .logs-link:hover { background: #ff7b00; }
+    .footer { text-align: center; margin-top: 24px; color: #666; font-size: 12px; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
       <div class="logo">🦎</div>
-      <h1>QA Iguana - דו"ח בוקר</h1>
-      <div class="timestamp">📅 ${report.timestamp}</div>
+      <div class="title">QA Iguana Agent</div>
+      <div class="date">${this.formatDate()}</div>
+      ${this.runId ? `<div class="run-id">Run #${this.runNumber || this.runId}</div>` : ''}
     </div>
     
-    <div class="status-banner">
-      ${statusText}
-    </div>
+    <div class="status-box">
+      <div class="status-text">${statusText}</div>
+      <a href="${this.getActionsLink()}" class="logs-link">📋 צפה בלוגים המלאים</a>
+    </div>`;
 
-    <!-- SSL Certificates -->
+    // SSL Section
+    if (results.ssl && results.ssl.details) {
+      html += `
     <div class="section">
-      <h2>🔐 SSL Certificates</h2>
-      ${sslDetails.length > 0 ? sslDetails.map(site => `
-        <div class="site-item">
-          <span class="site-name">${site.siteName}</span>
-          <span class="status-${site.status}">
-            ${site.error ? site.error : `${site.daysRemaining} days`}
-          </span>
-        </div>
-      `).join('') : '<div class="site-item"><span>No SSL checks performed</span></div>'}
-    </div>
+      <div class="section-title">🔐 תעודות SSL</div>`;
+      
+      results.ssl.details.forEach(item => {
+        const itemClass = item.healthy ? 'healthy' : (item.warning ? 'warning' : 'error');
+        const icon = item.healthy ? '✅' : (item.warning ? '⚠️' : '❌');
+        
+        html += `
+      <div class="item ${itemClass}">
+        <div class="item-name">${icon} ${item.name}</div>
+        <div class="item-url">${item.url}</div>`;
+        
+        if (item.daysUntilExpiry !== undefined) {
+          html += `<div class="item-detail">תפוגה בעוד: <strong>${item.daysUntilExpiry} ימים</strong></div>`;
+          if (item.expiryDate) {
+            html += `<div class="item-detail">תאריך: ${item.expiryDate}</div>`;
+          }
+        }
+        
+        if (item.error) {
+          html += `<div class="item-detail" style="color: #ff6b6b;">❌ שגיאה: ${item.error}</div>`;
+        }
+        
+        if (!item.healthy || item.warning) {
+          html += `<div class="fix-hint">🔧 לתיקון: Vercel → Settings → Domains → Refresh SSL</div>`;
+        }
+        
+        if (!item.healthy && this.actionsUrl) {
+          html += `<a href="${this.actionsUrl}" class="logs-link">📋 לוגים מלאים</a>`;
+        }
+        
+        html += `</div>`;
+      });
+      
+      html += `</div>`;
+    }
 
-    <!-- Uptime & Performance -->
+    // Uptime Section
+    if (results.uptime && results.uptime.details) {
+      html += `
     <div class="section">
-      <h2>⬆️ Uptime & Performance</h2>
-      ${uptimeDetails.length > 0 ? uptimeDetails.map(site => `
-        <div class="site-item">
-          <span class="site-name">${site.siteName}</span>
-          <span class="status-${site.overallStatus}">
-            ${site.avgResponseTime ? `${site.avgResponseTime}ms` : 'DOWN'}
-          </span>
-        </div>
-      `).join('') : '<div class="site-item"><span>No uptime checks performed</span></div>'}
-    </div>
+      <div class="section-title">⬆️ זמינות ומהירות</div>`;
+      
+      results.uptime.details.forEach(item => {
+        const itemClass = item.healthy ? 'healthy' : 'error';
+        const icon = item.healthy ? '✅' : '❌';
+        
+        html += `
+      <div class="item ${itemClass}">
+        <div class="item-name">${icon} ${item.name}</div>
+        <div class="item-url">${item.url}</div>
+        <div class="item-detail">סטטוס: ${item.statusCode || 'N/A'} | זמן תגובה: ${item.responseTime || 'N/A'}ms</div>`;
+        
+        if (item.error) {
+          html += `<div class="item-detail" style="color: #ff6b6b;">❌ שגיאה: ${item.error}</div>`;
+        }
+        
+        if (!item.healthy && this.actionsUrl) {
+          html += `<a href="${this.actionsUrl}" class="logs-link">📋 לוגים מלאים</a>`;
+        }
+        
+        html += `</div>`;
+      });
+      
+      html += `</div>`;
+    }
 
-    <!-- Links Health -->
+    // Links Section
+    if (results.links && results.links.details) {
+      html += `
     <div class="section">
-      <h2>🔗 Links Health</h2>
-      ${linksDetails.length > 0 ? linksDetails.map(site => `
-        <div class="site-item">
-          <span class="site-name">${site.siteName}</span>
-          <span class="${site.totalBrokenLinks === 0 ? 'status-ok' : 'status-warning'}">
-            ${site.totalBrokenLinks === 0 ? '✅ All OK' : `⚠️ ${site.totalBrokenLinks} broken`}
-          </span>
-        </div>
-      `).join('') : '<div class="site-item"><span>No link checks performed</span></div>'}
-    </div>
+      <div class="section-title">🔗 בדיקת לינקים</div>`;
+      
+      results.links.details.forEach(item => {
+        const itemClass = item.healthy ? 'healthy' : 'error';
+        const icon = item.healthy ? '✅' : '❌';
+        
+        html += `
+      <div class="item ${itemClass}">
+        <div class="item-name">${icon} ${item.name}</div>
+        <div class="item-url">${item.url}</div>`;
+        
+        if (item.brokenLinks && item.brokenLinks.length > 0) {
+          html += `<div class="item-detail" style="color: #ff6b6b;">⚠️ נמצאו ${item.brokenLinks.length} לינקים שבורים:</div>`;
+          
+          item.brokenLinks.forEach((link, index) => {
+            html += `
+          <div class="broken-link">
+            <div class="broken-link-title">[${index + 1}] לינק שבור</div>
+            <div class="broken-link-detail"><strong>URL:</strong> <span class="broken-link-url">${link.href}</span></div>
+            <div class="broken-link-detail"><strong>נמצא בעמוד:</strong> ${link.foundOnPage || item.url}</div>
+            <div class="broken-link-detail"><strong>טקסט הלינק:</strong> "${link.text || 'ללא טקסט'}"</div>
+            <div class="broken-link-detail"><strong>סטטוס HTTP:</strong> ${link.statusCode || 'לא זמין'}</div>
+            ${link.error ? `<div class="broken-link-detail"><strong>שגיאה:</strong> ${link.error}</div>` : ''}
+          </div>`;
+          });
+        } else if (item.healthy) {
+          html += `<div class="item-detail" style="color: #51cf66;">✓ כל הלינקים תקינים</div>`;
+        }
+        
+        if (!item.healthy && this.actionsUrl) {
+          html += `<a href="${this.actionsUrl}" class="logs-link">📋 לוגים מלאים</a>`;
+        }
+        
+        html += `</div>`;
+      });
+      
+      html += `</div>`;
+    }
 
-    <!-- ✅ IMPROVED: Critical Issues with full details -->
-    ${report.criticalIssues.length > 0 ? `
-    <div class="section">
-      <h2>🚨 Critical Issues</h2>
-      ${report.criticalIssues.map(issue => `
-        <div class="issue-card">
-          <div class="issue-header">
-            <span class="issue-icon">${issue.icon}</span>
-            <span class="issue-site">${issue.site}</span>
-          </div>
-          <div class="issue-title">${issue.issue}</div>
-          <div class="issue-description">
-            📝 ${issue.description}
-          </div>
-          ${issue.action ? `
-          <div class="issue-action">
-            🔧 <strong>פעולה נדרשת:</strong> ${issue.action}
-          </div>
-          ` : ''}
-          ${issue.link ? `
-          <a href="${issue.link}" class="issue-link" target="_blank">🔗 פתח אתר</a>
-          ` : ''}
-        </div>
-      `).join('')}
-    </div>
-    ` : ''}
-
-    <!-- ✅ IMPROVED: Warnings with full details -->
-    ${report.warnings.length > 0 ? `
-    <div class="section">
-      <h2>⚠️ Warnings</h2>
-      ${report.warnings.map(warning => `
-        <div class="issue-card warning">
-          <div class="issue-header">
-            <span class="issue-icon">${warning.icon}</span>
-            <span class="issue-site">${warning.site}</span>
-          </div>
-          <div class="issue-title">${warning.issue}</div>
-          <div class="issue-description">
-            📝 ${warning.description}
-          </div>
-          ${warning.link ? `
-          <a href="${warning.link}" class="issue-link" target="_blank">🔗 פתח אתר</a>
-          ` : ''}
-        </div>
-      `).join('')}
-    </div>
-    ` : ''}
-
-    <!-- Required Actions -->
-    ${report.actions.length > 0 ? `
-    <div class="section">
-      <h2>📋 Required Actions</h2>
-      <ul class="action-list">
-        ${report.actions.map((action, i) => `
-          <li class="action-item">
-            <span class="action-number">${i + 1}</span>
-            <span>${action}</span>
-          </li>
-        `).join('')}
-      </ul>
-    </div>
-    ` : ''}
-
-    <!-- Quick Links -->
-    <div class="quick-links">
-      <a href="https://i4iguana.com/admin/super" class="quick-link">🦎 Admin Panel</a>
-      <a href="https://vercel.com/dashboard" class="quick-link">▲ Vercel</a>
-      <a href="https://console.firebase.google.com" class="quick-link">🔥 Firebase</a>
-    </div>
-
+    // Footer
+    html += `
     <div class="footer">
-      🦎 QA Iguana Agent v2.0 - "שומר על האימפריה 24/7"<br>
+      <a href="${this.getActionsLink()}" style="color: #ff8c00;">📋 לוגים מלאים ב-GitHub Actions</a><br><br>
+      🦎 QA Iguana Agent v1.3.0 - "שומר על האימפריה 24/7"<br>
       No Art Gallery © 2026
     </div>
   </div>
 </body>
-</html>
-    `;
+</html>`;
+
+    return html;
+  }
+
+  /**
+   * Generate JSON report
+   */
+  generateJsonReport(results, hasIssues) {
+    return JSON.stringify({
+      meta: {
+        generatedAt: new Date().toISOString(),
+        checkTime: this.checkTime.toISOString(),
+        timezone: this.timezone,
+        version: '1.3.0',
+        hasIssues: hasIssues,
+        actionsUrl: this.getActionsLink(),
+        runId: this.runId,
+        runNumber: this.runNumber
+      },
+      results: results
+    }, null, 2);
   }
 }
 
