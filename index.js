@@ -3,6 +3,7 @@
 /**
  * 🦎 QA Iguana Agent - Main Entry Point
  * The Empire Guardian - Automated QA Testing
+ * v1.2.0 - Added GitHub Actions links for issues
  */
 
 require('dotenv').config();
@@ -37,6 +38,24 @@ function loadConfig() {
 }
 
 /**
+ * Get GitHub Actions run URL
+ */
+function getGitHubActionsUrl(config) {
+  const github = config.settings.github;
+  if (!github) return null;
+  
+  // If running in GitHub Actions, use the actual run ID
+  const runId = process.env.GITHUB_RUN_ID;
+  
+  if (runId) {
+    return `https://github.com/${github.owner}/${github.repo}/actions/runs/${runId}`;
+  }
+  
+  // Fallback to general actions page
+  return github.actionsUrl || `https://github.com/${github.owner}/${github.repo}/actions`;
+}
+
+/**
  * Print banner
  */
 function printBanner() {
@@ -44,7 +63,7 @@ function printBanner() {
 ╔═══════════════════════════════════════════════════════════════╗
 ║                                                               ║
 ║           🦎 QA IGUANA AGENT - The Empire Guardian            ║
-║                                                               ║
+║                        v1.2.0                                 ║
 ║              "שומר על האימפריה 24/7"                          ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
@@ -146,6 +165,15 @@ async function main() {
   const config = loadConfig();
   const results = {};
   
+  // Get GitHub Actions URL for reports
+  const actionsUrl = getGitHubActionsUrl(config);
+  
+  if (actionsUrl && process.env.GITHUB_RUN_ID) {
+    console.log(`📋 Run ID: ${process.env.GITHUB_RUN_ID}`);
+    console.log(`🔗 Logs: ${actionsUrl}`);
+    console.log('');
+  }
+  
   // Always run all tests when --full-report is specified
   if (options.ssl) {
     results.ssl = await runSSLChecks(config);
@@ -164,7 +192,10 @@ async function main() {
   console.log('─'.repeat(50));
   
   const reportGenerator = new ReportGenerator({
-    timezone: config.settings.timezone
+    timezone: config.settings.timezone,
+    actionsUrl: actionsUrl,
+    runId: process.env.GITHUB_RUN_ID,
+    runNumber: process.env.GITHUB_RUN_NUMBER
   });
   
   const report = reportGenerator.generateMorningReport(results);
@@ -231,6 +262,9 @@ async function main() {
     process.exit(0);
   } else {
     console.log('⚠️ Issues detected - check report for details');
+    if (actionsUrl) {
+      console.log(`📋 Full logs: ${actionsUrl}`);
+    }
     process.exit(1);
   }
 }

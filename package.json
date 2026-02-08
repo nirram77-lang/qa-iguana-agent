@@ -1,6 +1,6 @@
 {
   "name": "qa-iguana-agent",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "🦎 QA Iguana Agent - The Empire Guardian",
   "main": "index.js",
   "scripts": {
