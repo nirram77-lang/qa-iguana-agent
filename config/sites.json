@@ -1,9 +1,9 @@
 {
   "meta": {
-    "version": "1.2.0",
+    "version": "1.2.1",
     "lastUpdated": "2026-02-08",
     "owner": "Nir Ram - No Art Gallery",
-    "notes": "v1.2.0 - Added SOS Click monitoring + GitHub Actions links"
+    "notes": "v1.2.1 - Split I4IGUANA into Website + App"
   },
   "settings": {
     "alertEmail": "nir@noartgallery.com",
@@ -29,12 +29,39 @@
   },
   "sites": [
     {
+      "id": "i4iguana-website",
+      "name": "I4IGUANA Website",
+      "url": "https://i4iguana.com",
+      "type": "website",
+      "priority": "critical",
+      "languages": ["he", "en", "pt"],
+      "checks": {
+        "ssl": true,
+        "uptime": true,
+        "links": true,
+        "forms": false,
+        "i18n": true,
+        "screenshots": true
+      },
+      "pages": [
+        { "path": "/", "name": "Landing Page (EN)" },
+        { "path": "/he", "name": "Hebrew Landing" },
+        { "path": "/br", "name": "Portuguese Landing" },
+        { "path": "/privacy", "name": "Privacy Policy" },
+        { "path": "/terms", "name": "Terms of Service" }
+      ],
+      "expectedElements": {
+        "logo": ".iguana-logo, .logo, 🦎",
+        "cta": ".cta-button, .download-btn"
+      }
+    },
+    {
       "id": "i4iguana-app",
       "name": "I4IGUANA App",
       "url": "https://i4iguana.com",
       "type": "app",
       "priority": "critical",
-      "languages": ["he", "en", "pt"],
+      "languages": ["he", "en"],
       "checks": {
         "ssl": true,
         "uptime": true,
@@ -44,13 +71,8 @@
         "screenshots": true
       },
       "pages": [
-        { "path": "/", "name": "Landing Page" },
         { "path": "/app", "name": "Main App" },
-        { "path": "/he", "name": "Hebrew Landing" },
-        { "path": "/br", "name": "Portuguese Landing" },
-        { "path": "/admin/super", "name": "Admin Panel" },
-        { "path": "/privacy", "name": "Privacy Policy" },
-        { "path": "/terms", "name": "Terms of Service" }
+        { "path": "/admin/super", "name": "Super Admin Panel" }
       ],
       "expectedElements": {
         "logo": ".iguana-logo, .logo, 🦎",
