@@ -4,7 +4,7 @@
 
 > "שומר על האימפריה 24/7"
 
-[![Version](https://img.shields.io/badge/version-1.2.0-green.svg)](https://github.com/nirram77-lang/qa-iguana-agent)
+[![Version](https://img.shields.io/badge/version-1.2.1-green.svg)](https://github.com/nirram77-lang/qa-iguana-agent)
 [![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -25,7 +25,8 @@
 
 | אתר | סוג | עמודים | שפות | Priority |
 |-----|-----|--------|------|----------|
-| **I4IGUANA** | App | 7 עמודים | HE, EN, PT | 🔴 Critical |
+| **I4IGUANA Website** | Website | 5 עמודים | HE, EN, PT | 🔴 Critical |
+| **I4IGUANA App** | App | 2 עמודים | HE, EN | 🔴 Critical |
 | **SOS Click App** | App | 1 עמוד | HE, EN | 🔴 Critical |
 | **SOS Click Website** | Website | 3 עמודים | HE, EN | 🔴 Critical |
 | **No Art Gallery** | Website | 4 עמודים | EN | 🔴 Critical |
@@ -35,14 +36,16 @@
 
 ### פירוט עמודים לכל אתר:
 
-**I4IGUANA** (`i4iguana.com`)
-- `/` — Landing Page
-- `/app` — Main App
+**I4IGUANA Website** (`i4iguana.com`)
+- `/` — Landing Page (EN)
 - `/he` — Hebrew Landing
 - `/br` — Portuguese Landing
-- `/admin/super` — Admin Panel
 - `/privacy` — Privacy Policy
 - `/terms` — Terms of Service
+
+**I4IGUANA App** (`i4iguana.com/app`)
+- `/app` — Main App
+- `/admin/super` — Super Admin Panel
 
 **SOS Click** (`sosclick.app` + `app.sosclick.app`)
 - `/` — Landing / Main App
@@ -219,6 +222,10 @@ qa-iguana-agent/
 ---
 
 ## 📝 Changelog
+
+### v1.2.1 (2026-02-08)
+- ✨ **Split:** I4IGUANA separated into Website + App monitoring
+- 📊 **Total:** Now monitoring 8 sites
 
 ### v1.2.0 (2026-02-08)
 - ✨ **Added:** SOS Click monitoring (App + Website)
