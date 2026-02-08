@@ -4,7 +4,7 @@
 
 > "שומר על האימפריה 24/7"
 
-[![Version](https://img.shields.io/badge/version-1.2.1-green.svg)](https://github.com/nirram77-lang/qa-iguana-agent)
+[![Version](https://img.shields.io/badge/version-1.3.0-green.svg)](https://github.com/nirram77-lang/qa-iguana-agent)
 [![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -222,6 +222,14 @@ qa-iguana-agent/
 ---
 
 ## 📝 Changelog
+
+### v1.3.0 (2026-02-08)
+- ✨ **Added:** Timestamp for each check (⏰ שעת בדיקה)
+- ✨ **Added:** Direct GitHub Actions link in every report (always visible, not just on errors)
+- ✨ **Added:** Detailed error messages with fix instructions
+- ✨ **Improved:** "SITE DOWN" now shows HTTP status + exact error
+- ✨ **Improved:** Broken links show full URL path + where found
+- 🔧 **Fixed:** Links to logs now use direct GitHub Actions URL
 
 ### v1.2.1 (2026-02-08)
 - ✨ **Split:** I4IGUANA separated into Website + App monitoring
