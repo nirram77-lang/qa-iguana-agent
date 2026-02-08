@@ -1,9 +1,9 @@
 {
   "meta": {
-    "version": "1.2.1",
+    "version": "1.3.0",
     "lastUpdated": "2026-02-08",
     "owner": "Nir Ram - No Art Gallery",
-    "notes": "v1.2.1 - Split I4IGUANA into Website + App"
+    "notes": "v1.3.0 - Enhanced reports with timestamps and direct GitHub links"
   },
   "settings": {
     "alertEmail": "nir@noartgallery.com",
