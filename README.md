@@ -4,34 +4,119 @@
 
 > "שומר על האימפריה 24/7"
 
----
-
-## 🎯 Overview
-
-QA Iguana Agent is an automated quality assurance system that monitors all websites and applications in the No Art Gallery ecosystem. It runs daily checks and alerts you to any issues before your users notice them.
-
-### What It Monitors
-
-| Site | Type | Checks |
-|------|------|--------|
-| 🦎 i4iguana.com | App | SSL, Uptime, Links, Forms, i18n |
-| 🎨 noartgallery.com | Hub | SSL, Uptime, Links, Forms |
-| 📚 funnydates101.co.il | Website | SSL, Uptime, Links, Forms |
-| 📖 funnydates101.com | Website | SSL, Uptime, Links |
-| ⚙️ gocio.org | Website | SSL, Uptime, Links, Forms |
-| 🔧 i4iguana.com/admin | Admin | SSL, Uptime |
+[![Version](https://img.shields.io/badge/version-1.2.0-green.svg)](https://github.com/nirram77-lang/qa-iguana-agent)
+[![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ---
 
-## 🚀 Quick Start
+## 🎯 מה זה עושה?
 
-### Prerequisites
+סוכן QA אוטומטי שרץ 3 פעמים ביום ובודק את כל האתרים והאפליקציות של No Art Gallery:
 
-- Node.js 18+
-- npm or yarn
-- Gmail account (for email alerts) or other SMTP provider
+- 🔐 **SSL Certificates** — בדיקת תוקף תעודות SSL והתראה 30 יום לפני תפוגה
+- ⬆️ **Uptime & Performance** — בדיקת זמינות וזמני תגובה
+- 🔗 **Broken Links** — סריקת כל הלינקים באתר וזיהוי לינקים שבורים
+- 📧 **Email Alerts** — דוח מפורט למייל עם לינק ישיר ללוגים
 
-### Installation
+---
+
+## 🌐 אתרים מנוטרים
+
+| אתר | סוג | עמודים | שפות | Priority |
+|-----|-----|--------|------|----------|
+| **I4IGUANA** | App | 7 עמודים | HE, EN, PT | 🔴 Critical |
+| **SOS Click App** | App | 1 עמוד | HE, EN | 🔴 Critical |
+| **SOS Click Website** | Website | 3 עמודים | HE, EN | 🔴 Critical |
+| **No Art Gallery** | Website | 4 עמודים | EN | 🔴 Critical |
+| **FunnyDates Hebrew** | Website | 1 עמוד | HE | 🔴 Critical |
+| **FunnyDates English** | Website | 1 עמוד | EN | 🟡 High |
+| **GO CIO** | Website | 1 עמוד | HE | 🟢 Medium |
+
+### פירוט עמודים לכל אתר:
+
+**I4IGUANA** (`i4iguana.com`)
+- `/` — Landing Page
+- `/app` — Main App
+- `/he` — Hebrew Landing
+- `/br` — Portuguese Landing
+- `/admin/super` — Admin Panel
+- `/privacy` — Privacy Policy
+- `/terms` — Terms of Service
+
+**SOS Click** (`sosclick.app` + `app.sosclick.app`)
+- `/` — Landing / Main App
+- `/privacy` — Privacy Policy
+- `/terms` — Terms of Service
+
+**No Art Gallery** (`noartgallery.com`)
+- `/` — Home
+- `/accessibility.html` — Accessibility
+- `/privacy.html` — Privacy
+- `/terms.html` — Terms
+
+---
+
+## ⏰ לוח זמנים
+
+הסוכן רץ אוטומטית 3 פעמים ביום:
+
+| שעה | תיאור |
+|-----|-------|
+| 06:00 | 🌅 בדיקת בוקר |
+| 12:00 | 🌞 בדיקת צהריים |
+| 18:00 | 🌆 בדיקת ערב |
+
+*כל השעות בזמן ישראל (Asia/Jerusalem)*
+
+---
+
+## 📊 דוגמת דוח
+
+### כשהכל תקין:
+```
+═══════════════════════════════════════════════════════════════
+🦎 QA IGUANA AGENT - DAILY REPORT
+═══════════════════════════════════════════════════════════════
+📅 יום ראשון, 8 בפברואר 2026 בשעה 07:00:00
+
+✅ STATUS: הכל תקין
+
+🔐 תעודות SSL
+────────────────────────────────────────────────────────────────
+✅ I4IGUANA App
+   כתובת: https://i4iguana.com
+   תפוגה בעוד: 89 ימים
+
+✅ SOS Click App
+   כתובת: https://app.sosclick.app
+   תפוגה בעוד: 120 ימים
+```
+
+### כשיש בעיות:
+```
+⚠️ STATUS: נמצאו בעיות
+📋 לוגים מלאים: https://github.com/nirram77-lang/qa-iguana-agent/actions/runs/12345
+
+🔗 לינקים שבורים
+────────────────────────────────────────────────────────────────
+❌ I4IGUANA App
+   כתובת: https://i4iguana.com
+   ⚠️ נמצאו 1 לינקים שבורים:
+
+   [1] לינק שבור:
+       URL: https://i4iguana.com/old-page
+       נמצא בעמוד: https://i4iguana.com/
+       טקסט: "לחץ כאן"
+       סטטוס HTTP: 404
+       שגיאה: Not Found
+   
+   📋 לוגים: https://github.com/.../actions/runs/12345
+```
+
+---
+
+## 🚀 התקנה
 
 ```bash
 # Clone the repository
@@ -41,232 +126,135 @@ cd qa-iguana-agent
 # Install dependencies
 npm install
 
-# Copy environment template
+# Create .env file
 cp .env.example .env
-
-# Edit .env with your settings
-nano .env
-
-# Run your first check
-npm test
-```
-
-### Running Tests
-
-```bash
-# Run all tests
-npm test
-
-# Run specific tests
-npm run test:ssl      # SSL certificates only
-npm run test:uptime   # Uptime & performance only
-npm run test:links    # Broken links only
-
-# Generate full report
-npm run morning-check
+# Edit .env with your SMTP credentials
 ```
 
 ---
 
-## ⚙️ Configuration
+## 🔧 שימוש
+
+### הרצה מקומית:
+
+```bash
+# Full report (all checks)
+npm test
+
+# SSL only
+npm run test:ssl
+
+# Uptime only
+npm run test:uptime
+
+# Links only
+npm run test:links
+
+# Full report + send email
+npm run morning-check
+```
+
+### GitHub Actions:
+
+הסוכן רץ אוטומטית דרך GitHub Actions. אפשר גם להפעיל ידנית:
+1. לך ל-Actions tab
+2. בחר "QA Morning Check"
+3. לחץ "Run workflow"
+
+---
+
+## ⚙️ קונפיגורציה
+
+### config/sites.json
+
+```json
+{
+  "settings": {
+    "thresholds": {
+      "responseTimeWarning": 3000,    // ms
+      "responseTimeCritical": 8000,   // ms
+      "sslExpiryWarning": 30,         // days
+      "sslExpiryCritical": 7          // days
+    }
+  }
+}
+```
 
 ### Environment Variables (.env)
 
 ```env
-# Email Configuration (required for alerts)
-SMTP_HOST=smtp.gmail.com
+SMTP_HOST=smtp.example.com
 SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password
-
-# Alert Recipients
-ALERT_EMAIL=nir@noartgallery.com
-BACKUP_EMAIL=nir.ram77@gmail.com
-```
-
-### Sites Configuration (config/sites.json)
-
-Add or modify sites in the `sites` array:
-
-```json
-{
-  "id": "my-site",
-  "name": "My Site",
-  "url": "https://mysite.com",
-  "type": "website",
-  "priority": "critical",
-  "languages": ["en"],
-  "checks": {
-    "ssl": true,
-    "uptime": true,
-    "links": true,
-    "forms": false,
-    "i18n": false,
-    "screenshots": false
-  }
-}
+SMTP_USER=your-email@example.com
+SMTP_PASS=your-password
+ALERT_EMAIL=alerts@example.com
+BACKUP_EMAIL=backup@example.com
 ```
 
 ---
 
-## 📅 Automated Scheduling (GitHub Actions)
-
-The agent runs automatically via GitHub Actions:
-
-| Time (Israel) | Check Type | Description |
-|---------------|------------|-------------|
-| 07:00 | Full | Morning report + email |
-| 13:00 | Quick | SSL + Uptime only |
-| 19:00 | Quick | SSL + Uptime only |
-
-### Setting Up GitHub Actions
-
-1. Go to your repo → Settings → Secrets and variables → Actions
-2. Add these secrets:
-
-| Secret | Description |
-|--------|-------------|
-| `SMTP_HOST` | smtp.gmail.com |
-| `SMTP_PORT` | 587 |
-| `SMTP_USER` | Your email |
-| `SMTP_PASS` | App password (not regular password!) |
-| `ALERT_EMAIL` | nir@noartgallery.com |
-| `BACKUP_EMAIL` | nir.ram77@gmail.com |
-
-3. Enable Actions in your repository
-
----
-
-## 📊 Report Types
-
-### Text Report
-
-Plain text format, sent via email and saved to file:
-
-```
-═══════════════════════════════════════════════════
-🦎 QA IGUANA - דו"ח בוקר יומי
-📅 05/01/2026 08:00
-═══════════════════════════════════════════════════
-
-📊 סיכום מהיר:
-✅ כל המערכות תקינות!
-```
-
-### HTML Report
-
-Beautiful HTML email with:
-- Color-coded status indicators
-- Site-by-site breakdown
-- Action items list
-- Professional design matching No Art Gallery branding
-
-### JSON Report
-
-Machine-readable format for integrations and dashboards.
-
----
-
-## 🔧 Extending the Agent
-
-### Adding New Checks
-
-Create a new file in `tests/`:
-
-```javascript
-// tests/my-check.js
-class MyCheck {
-  async run(site) {
-    // Your check logic
-    return { status: 'ok', message: 'All good!' };
-  }
-}
-module.exports = MyCheck;
-```
-
-### Adding New Alert Channels
-
-Create a new file in `reports/`:
-
-```javascript
-// reports/slack-sender.js
-class SlackSender {
-  async send(report) {
-    // Send to Slack webhook
-  }
-}
-module.exports = SlackSender;
-```
-
----
-
-## 📁 Project Structure
+## 📁 מבנה הפרויקט
 
 ```
 qa-iguana-agent/
-├── index.js              # Main entry point
-├── package.json          # Dependencies
-├── .env.example          # Environment template
-│
+├── .github/
+│   └── workflows/
+│       └── qa-morning.yml      # GitHub Actions workflow
 ├── config/
-│   └── sites.json        # Site configurations
-│
-├── tests/
-│   ├── ssl-checker.js    # SSL certificate checks
-│   ├── uptime-monitor.js # Uptime & response time
-│   └── link-validator.js # Broken link detection
-│
+│   └── sites.json              # Site configuration
 ├── reports/
-│   ├── report-generator.js # Report formatting
-│   ├── email-sender.js     # Email delivery
-│   └── output/             # Generated reports
-│
-├── screenshots/
-│   ├── baseline/         # Reference screenshots
-│   └── current/          # Current screenshots
-│
-└── .github/
-    └── workflows/
-        └── qa-morning.yml # GitHub Actions
+│   ├── output/                 # Generated reports
+│   ├── report-generator.js     # Report generation
+│   └── email-sender.js         # Email functionality
+├── tests/
+│   ├── ssl-checker.js          # SSL certificate checks
+│   ├── uptime-monitor.js       # Uptime monitoring
+│   └── link-validator.js       # Broken link detection
+├── index.js                    # Main entry point
+├── package.json
+├── .env.example
+└── README.md
 ```
 
 ---
 
-## 🛠️ Roadmap
+## 📝 Changelog
 
-### v1.0 (Current)
-- [x] SSL certificate monitoring
-- [x] Uptime & response time checks
-- [x] Broken link detection
-- [x] Email reports
-- [x] GitHub Actions automation
+### v1.2.0 (2026-02-08)
+- ✨ **Added:** SOS Click monitoring (App + Website)
+- ✨ **Added:** GitHub Actions link in error reports
+- ✨ **Improved:** Detailed broken link reporting (URL, page, text, status)
+- ✨ **Improved:** Hebrew RTL support in HTML reports
 
-### v1.1 (Planned)
-- [ ] WhatsApp alerts (Twilio)
-- [ ] Screenshot comparisons
-- [ ] Form submission testing
-- [ ] Multi-language validation
+### v1.1.0 (2026-01-12)
+- 🐛 Fixed false positives for admin panel SSL checks
+- ✨ Added multi-language support for I4IGUANA
 
-### v1.2 (Future)
-- [ ] Web dashboard
-- [ ] Historical trends
-- [ ] Performance graphs
-- [ ] Mobile app notifications
+### v1.0.0 (2026-01-01)
+- 🎉 Initial release
+- SSL certificate monitoring
+- Uptime monitoring
+- Link validation
+- Email reports
 
 ---
 
 ## 🤝 Contributing
 
-This is a private project for No Art Gallery. For questions or suggestions, contact Nir Ram.
+Created by **Nir Ram** for **No Art Gallery**
 
 ---
 
 ## 📜 License
 
-MIT © 2026 No Art Gallery
+MIT License - feel free to use and modify!
 
 ---
 
-## 🦎 Made with 💚 by No Art Gallery
+<div align="center">
 
-*"Stories Create Worlds"*
+🦎 **QA Iguana Agent** — *"שומר על האימפריה 24/7"*
+
+**No Art Gallery © 2026**
+
+</div>
