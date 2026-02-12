@@ -73,9 +73,12 @@ class EmailSender {
    * @returns {Promise<object>} Send result
    */
   async sendMorningReport(report) {
-    const isHealthy = report.data.allHealthy;
-    const criticalCount = report.data.criticalIssues.length;
-    const warningCount = report.data.warnings.length;
+    const data = report.data || {};
+    const isHealthy = data.allHealthy !== undefined ? data.allHealthy : !report.hasIssues;
+    const criticalIssues = data.criticalIssues || [];
+    const warnings = data.warnings || [];
+    const criticalCount = criticalIssues.length;
+    const warningCount = warnings.length;
 
     let subjectEmoji = '✅';
     let subjectStatus = 'All Systems OK';
@@ -86,9 +89,13 @@ class EmailSender {
     } else if (warningCount > 0) {
       subjectEmoji = '⚠️';
       subjectStatus = `${warningCount} Warning(s)`;
+    } else if (!isHealthy) {
+      subjectEmoji = '⚠️';
+      subjectStatus = 'Issues Detected';
     }
 
-    const subject = `${subjectEmoji} QA Iguana Report - ${subjectStatus} - ${report.data.timestamp}`;
+    const timestamp = data.timestamp || new Date().toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' });
+    const subject = `${subjectEmoji} QA Iguana Report - ${subjectStatus} - ${timestamp}`;
 
     return this.send({
       subject,

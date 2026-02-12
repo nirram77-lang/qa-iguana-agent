@@ -1,6 +1,6 @@
 /**
  * 🦎 QA Iguana Agent - Report Generator
- * Enhanced v1.3.0 - Detailed timestamps, direct links, downtime tracking
+ * Enhanced v1.3.1 - Fixed field mapping to match test module output
  */
 
 class ReportGenerator {
@@ -12,9 +12,6 @@ class ReportGenerator {
     this.checkTime = options.checkTime || new Date();
   }
 
-  /**
-   * Format date for display
-   */
   formatDate(date = new Date()) {
     return date.toLocaleString('he-IL', { 
       timeZone: this.timezone,
@@ -23,19 +20,14 @@ class ReportGenerator {
     });
   }
 
-  /**
-   * Format time only
-   */
   formatTime(date = new Date()) {
+    if (typeof date === 'string') date = new Date(date);
     return date.toLocaleString('he-IL', { 
       timeZone: this.timezone,
       timeStyle: 'medium'
     });
   }
 
-  /**
-   * Generate GitHub Actions direct link
-   */
   getActionsLink() {
     if (this.runId) {
       return `https://github.com/nirram77-lang/qa-iguana-agent/actions/runs/${this.runId}`;
@@ -43,9 +35,6 @@ class ReportGenerator {
     return 'https://github.com/nirram77-lang/qa-iguana-agent/actions';
   }
 
-  /**
-   * Generate morning report in multiple formats
-   */
   generateMorningReport(results) {
     const hasIssues = this.hasAnyIssues(results);
     
@@ -53,13 +42,61 @@ class ReportGenerator {
       text: this.generateTextReport(results, hasIssues),
       html: this.generateHtmlReport(results, hasIssues),
       json: this.generateJsonReport(results, hasIssues),
-      hasIssues: hasIssues
+      hasIssues: hasIssues,
+      data: {
+        allHealthy: !hasIssues,
+        criticalIssues: this.getCriticalIssues(results),
+        warnings: this.getWarnings(results),
+        timestamp: this.formatDate()
+      }
     };
   }
 
-  /**
-   * Check if there are any issues
-   */
+  getCriticalIssues(results) {
+    const issues = [];
+    if (results.ssl && results.ssl.details) {
+      results.ssl.details.forEach(item => {
+        if (item.status === 'critical' || item.status === 'error' || !item.valid) {
+          issues.push({ type: 'ssl', site: item.siteName || item.hostname, message: item.error || (item.isExpired ? 'Certificate expired' : `${item.daysRemaining} days remaining`) });
+        }
+      });
+    }
+    if (results.uptime && results.uptime.details) {
+      results.uptime.details.forEach(item => {
+        if (item.overallStatus === 'down' || item.overallStatus === 'error') {
+          issues.push({ type: 'uptime', site: item.siteName, message: 'Site is down' });
+        }
+      });
+    }
+    return issues;
+  }
+
+  getWarnings(results) {
+    const warnings = [];
+    if (results.ssl && results.ssl.details) {
+      results.ssl.details.forEach(item => {
+        if (item.status === 'warning') {
+          warnings.push({ type: 'ssl', site: item.siteName || item.hostname, message: `SSL expiring in ${item.daysRemaining} days` });
+        }
+      });
+    }
+    if (results.uptime && results.uptime.details) {
+      results.uptime.details.forEach(item => {
+        if (item.overallStatus === 'warning' || item.overallStatus === 'critical') {
+          warnings.push({ type: 'uptime', site: item.siteName, message: `Slow response: ${item.avgResponseTime}ms` });
+        }
+      });
+    }
+    if (results.links && results.links.details) {
+      results.links.details.forEach(item => {
+        if (item.totalBrokenLinks > 0) {
+          warnings.push({ type: 'links', site: item.siteName, message: `${item.totalBrokenLinks} broken links` });
+        }
+      });
+    }
+    return warnings;
+  }
+
   hasAnyIssues(results) {
     if (results.ssl && !results.ssl.allHealthy) return true;
     if (results.uptime && !results.uptime.allHealthy) return true;
@@ -67,9 +104,6 @@ class ReportGenerator {
     return false;
   }
 
-  /**
-   * Generate plain text report
-   */
   generateTextReport(results, hasIssues) {
     let report = [];
     
@@ -78,13 +112,10 @@ class ReportGenerator {
     report.push('═'.repeat(60));
     report.push(`📅 ${this.formatDate()}`);
     report.push(`⏰ בדיקה בוצעה בשעה: ${this.formatTime(this.checkTime)}`);
-    if (this.runNumber) {
-      report.push(`🔢 Run #${this.runNumber}`);
-    }
+    if (this.runNumber) report.push(`🔢 Run #${this.runNumber}`);
     report.push(`📋 לוגים מלאים: ${this.getActionsLink()}`);
     report.push('');
     
-    // Overall status
     if (hasIssues) {
       report.push('⚠️ STATUS: נמצאו בעיות - פרטים מלאים בלינק למעלה');
     } else {
@@ -100,28 +131,27 @@ class ReportGenerator {
       
       if (results.ssl.details && results.ssl.details.length > 0) {
         results.ssl.details.forEach(item => {
-          const status = item.healthy ? '✅' : (item.warning ? '⚠️' : '❌');
-          report.push(`${status} ${item.name}`);
-          report.push(`   כתובת: ${item.url}`);
-          report.push(`   נבדק בשעה: ${this.formatTime(item.checkedAt || this.checkTime)}`);
+          const isHealthy = item.valid && item.status !== 'critical' && item.status !== 'error';
+          const isWarning = item.status === 'warning';
+          const status = isHealthy ? '✅' : (isWarning ? '⚠️' : '❌');
           
-          if (item.daysUntilExpiry !== undefined) {
-            report.push(`   תפוגה בעוד: ${item.daysUntilExpiry} ימים`);
-            if (item.expiryDate) {
-              report.push(`   תאריך תפוגה: ${item.expiryDate}`);
+          report.push(`${status} ${item.siteName || item.hostname}`);
+          report.push(`   כתובת: ${item.url}`);
+          report.push(`   נבדק בשעה: ${this.formatTime(this.checkTime)}`);
+          
+          if (item.daysRemaining !== undefined) {
+            report.push(`   תפוגה בעוד: ${item.daysRemaining} ימים`);
+            if (item.validTo) {
+              report.push(`   תאריך תפוגה: ${new Date(item.validTo).toLocaleDateString('he-IL')}`);
             }
           }
-          
           if (item.error) {
             report.push(`   ❌ שגיאה: ${item.error}`);
             report.push(`   📋 לוג מלא: ${this.getActionsLink()}`);
           }
-          
-          // How to fix
-          if (!item.healthy || item.warning) {
+          if (!isHealthy || isWarning) {
             report.push(`   🔧 לתיקון: Vercel → Settings → Domains → Refresh SSL`);
           }
-          
           report.push('');
         });
       } else {
@@ -138,23 +168,25 @@ class ReportGenerator {
       
       if (results.uptime.details && results.uptime.details.length > 0) {
         results.uptime.details.forEach(item => {
-          const status = item.healthy ? '✅' : '❌';
-          report.push(`${status} ${item.name}`);
-          report.push(`   כתובת: ${item.url}`);
-          report.push(`   נבדק בשעה: ${this.formatTime(item.checkedAt || this.checkTime)}`);
-          report.push(`   סטטוס HTTP: ${item.statusCode || 'N/A'}`);
-          report.push(`   זמן תגובה: ${item.responseTime || 'N/A'}ms`);
+          const isHealthy = item.overallStatus === 'ok';
+          const status = isHealthy ? '✅' : '❌';
           
-          if (item.error) {
-            report.push(`   ❌ שגיאה: ${item.error}`);
-          }
+          report.push(`${status} ${item.siteName}`);
+          report.push(`   כתובת: ${item.baseUrl}`);
+          report.push(`   נבדק בשעה: ${this.formatTime(item.timestamp || this.checkTime)}`);
+          report.push(`   זמן תגובה ממוצע: ${item.avgResponseTime || 'N/A'}ms`);
           
-          if (!item.healthy) {
-            report.push(`   🚨 האתר לא הגיב בזמן הבדיקה!`);
+          if (!isHealthy && item.pages) {
+            item.pages.forEach(page => {
+              if (!page.isUp) {
+                report.push(`   ❌ ${page.pageName}: ${page.error || 'HTTP ' + page.statusCode}`);
+              } else if (page.status === 'critical' || page.status === 'warning') {
+                report.push(`   ⚠️ ${page.pageName}: ${page.responseTime}ms`);
+              }
+            });
             report.push(`   📋 לוג מלא: ${this.getActionsLink()}`);
             report.push(`   🔧 לתיקון: בדוק Vercel Dashboard או הרץ npm run build`);
           }
-          
           report.push('');
         });
       } else {
@@ -171,29 +203,28 @@ class ReportGenerator {
       
       if (results.links.details && results.links.details.length > 0) {
         results.links.details.forEach(item => {
-          const status = item.healthy ? '✅' : '❌';
-          report.push(`${status} ${item.name}`);
-          report.push(`   כתובת: ${item.url}`);
-          report.push(`   נבדק בשעה: ${this.formatTime(item.checkedAt || this.checkTime)}`);
+          const isHealthy = item.totalBrokenLinks === 0;
+          const status = isHealthy ? '✅' : '❌';
           
-          if (item.brokenLinks && item.brokenLinks.length > 0) {
-            report.push(`   ⚠️ נמצאו ${item.brokenLinks.length} לינקים שבורים:`);
-            item.brokenLinks.forEach((link, index) => {
+          report.push(`${status} ${item.siteName}`);
+          report.push(`   כתובת: ${item.baseUrl}`);
+          report.push(`   נבדק בשעה: ${this.formatTime(item.timestamp || this.checkTime)}`);
+          
+          if (item.allBrokenLinks && item.allBrokenLinks.length > 0) {
+            report.push(`   ⚠️ נמצאו ${item.allBrokenLinks.length} לינקים שבורים:`);
+            item.allBrokenLinks.forEach((link, index) => {
               report.push('');
               report.push(`   [${index + 1}] לינק שבור:`);
-              report.push(`       🔗 URL: ${link.href}`);
-              report.push(`       📄 נמצא בעמוד: ${link.foundOnPage || item.url}`);
+              report.push(`       🔗 URL: ${link.url || link.href}`);
+              report.push(`       📄 נמצא בעמוד: ${link.foundOn || item.baseUrl}`);
               report.push(`       📝 טקסט: "${link.text || 'ללא טקסט'}"`);
               report.push(`       🔢 סטטוס HTTP: ${link.statusCode || 'לא זמין'}`);
-              if (link.error) {
-                report.push(`       ❌ שגיאה: ${link.error}`);
-              }
+              if (link.error) report.push(`       ❌ שגיאה: ${link.error}`);
               report.push(`       📋 לוג מלא: ${this.getActionsLink()}`);
             });
-          } else if (item.healthy) {
+          } else if (isHealthy) {
             report.push(`   ✓ כל הלינקים תקינים`);
           }
-          
           report.push('');
         });
       } else {
@@ -205,22 +236,18 @@ class ReportGenerator {
     // Footer
     report.push('═'.repeat(60));
     report.push(`📋 לוגים מלאים: ${this.getActionsLink()}`);
-    report.push('🦎 QA Iguana Agent v1.3.0 - "שומר על האימפריה 24/7"');
+    report.push('🦎 QA Iguana Agent v1.3.1 - "שומר על האימפריה 24/7"');
     report.push('No Art Gallery © 2026');
     report.push('═'.repeat(60));
     
     return report.join('\n');
   }
 
-  /**
-   * Generate HTML report for email
-   */
   generateHtmlReport(results, hasIssues) {
     const statusColor = hasIssues ? '#ff6b6b' : '#51cf66';
     const statusText = hasIssues ? '⚠️ נמצאו בעיות' : '✅ הכל תקין';
     
-    let html = `
-<!DOCTYPE html>
+    let html = `<!DOCTYPE html>
 <html dir="rtl" lang="he">
 <head>
   <meta charset="UTF-8">
@@ -249,7 +276,6 @@ class ReportGenerator {
     .broken-link-detail { color: #ccc; margin: 2px 0; }
     .fix-hint { background: #4ade8022; border-radius: 4px; padding: 8px; margin-top: 8px; font-size: 12px; color: #4ade80; }
     .logs-link { display: inline-block; background: #ff8c00; color: #fff; padding: 8px 16px; border-radius: 6px; text-decoration: none; margin-top: 8px; font-size: 13px; }
-    .logs-link:hover { background: #ff7b00; }
     .footer { text-align: center; margin-top: 24px; color: #666; font-size: 12px; }
   </style>
 </head>
@@ -261,7 +287,6 @@ class ReportGenerator {
       <div class="date">${this.formatDate()}</div>
       ${this.runId ? `<div class="run-id">Run #${this.runNumber || this.runId}</div>` : ''}
     </div>
-    
     <div class="status-box">
       <div class="status-text">${statusText}</div>
       <a href="${this.getActionsLink()}" class="logs-link">📋 צפה בלוגים המלאים</a>
@@ -269,147 +294,89 @@ class ReportGenerator {
 
     // SSL Section
     if (results.ssl && results.ssl.details) {
-      html += `
-    <div class="section">
-      <div class="section-title">🔐 תעודות SSL</div>`;
-      
+      html += `<div class="section"><div class="section-title">🔐 תעודות SSL</div>`;
       results.ssl.details.forEach(item => {
-        const itemClass = item.healthy ? 'healthy' : (item.warning ? 'warning' : 'error');
-        const icon = item.healthy ? '✅' : (item.warning ? '⚠️' : '❌');
-        
-        html += `
-      <div class="item ${itemClass}">
-        <div class="item-name">${icon} ${item.name}</div>
-        <div class="item-url">${item.url}</div>`;
-        
-        if (item.daysUntilExpiry !== undefined) {
-          html += `<div class="item-detail">תפוגה בעוד: <strong>${item.daysUntilExpiry} ימים</strong></div>`;
-          if (item.expiryDate) {
-            html += `<div class="item-detail">תאריך: ${item.expiryDate}</div>`;
-          }
+        const isHealthy = item.valid && item.status !== 'critical' && item.status !== 'error';
+        const isWarning = item.status === 'warning';
+        const itemClass = isHealthy ? 'healthy' : (isWarning ? 'warning' : 'error');
+        const icon = isHealthy ? '✅' : (isWarning ? '⚠️' : '❌');
+        html += `<div class="item ${itemClass}"><div class="item-name">${icon} ${item.siteName || item.hostname}</div><div class="item-url">${item.url}</div>`;
+        if (item.daysRemaining !== undefined) {
+          html += `<div class="item-detail">תפוגה בעוד: <strong>${item.daysRemaining} ימים</strong></div>`;
+          if (item.validTo) html += `<div class="item-detail">תאריך: ${new Date(item.validTo).toLocaleDateString('he-IL')}</div>`;
         }
-        
-        if (item.error) {
-          html += `<div class="item-detail" style="color: #ff6b6b;">❌ שגיאה: ${item.error}</div>`;
-        }
-        
-        if (!item.healthy || item.warning) {
-          html += `<div class="fix-hint">🔧 לתיקון: Vercel → Settings → Domains → Refresh SSL</div>`;
-        }
-        
-        if (!item.healthy && this.actionsUrl) {
-          html += `<a href="${this.actionsUrl}" class="logs-link">📋 לוגים מלאים</a>`;
-        }
-        
+        if (item.error) html += `<div class="item-detail" style="color: #ff6b6b;">❌ ${item.error}</div>`;
+        if (!isHealthy || isWarning) html += `<div class="fix-hint">🔧 Vercel → Settings → Domains → Refresh SSL</div>`;
+        if (!isHealthy) html += `<a href="${this.getActionsLink()}" class="logs-link">📋 לוגים</a>`;
         html += `</div>`;
       });
-      
       html += `</div>`;
     }
 
     // Uptime Section
     if (results.uptime && results.uptime.details) {
-      html += `
-    <div class="section">
-      <div class="section-title">⬆️ זמינות ומהירות</div>`;
-      
+      html += `<div class="section"><div class="section-title">⬆️ זמינות ומהירות</div>`;
       results.uptime.details.forEach(item => {
-        const itemClass = item.healthy ? 'healthy' : 'error';
-        const icon = item.healthy ? '✅' : '❌';
-        
-        html += `
-      <div class="item ${itemClass}">
-        <div class="item-name">${icon} ${item.name}</div>
-        <div class="item-url">${item.url}</div>
-        <div class="item-detail">סטטוס: ${item.statusCode || 'N/A'} | זמן תגובה: ${item.responseTime || 'N/A'}ms</div>`;
-        
-        if (item.error) {
-          html += `<div class="item-detail" style="color: #ff6b6b;">❌ שגיאה: ${item.error}</div>`;
+        const isHealthy = item.overallStatus === 'ok';
+        const itemClass = isHealthy ? 'healthy' : (item.overallStatus === 'warning' ? 'warning' : 'error');
+        const icon = isHealthy ? '✅' : '❌';
+        html += `<div class="item ${itemClass}"><div class="item-name">${icon} ${item.siteName}</div><div class="item-url">${item.baseUrl}</div>`;
+        html += `<div class="item-detail">תגובה ממוצעת: ${item.avgResponseTime || 'N/A'}ms</div>`;
+        if (!isHealthy && item.pages) {
+          item.pages.forEach(page => {
+            if (!page.isUp) html += `<div class="item-detail" style="color: #ff6b6b;">❌ ${page.pageName}: ${page.error || 'HTTP ' + page.statusCode}</div>`;
+          });
+          html += `<a href="${this.getActionsLink()}" class="logs-link">📋 לוגים</a>`;
         }
-        
-        if (!item.healthy && this.actionsUrl) {
-          html += `<a href="${this.actionsUrl}" class="logs-link">📋 לוגים מלאים</a>`;
-        }
-        
         html += `</div>`;
       });
-      
       html += `</div>`;
     }
 
     // Links Section
     if (results.links && results.links.details) {
-      html += `
-    <div class="section">
-      <div class="section-title">🔗 בדיקת לינקים</div>`;
-      
+      html += `<div class="section"><div class="section-title">🔗 בדיקת לינקים</div>`;
       results.links.details.forEach(item => {
-        const itemClass = item.healthy ? 'healthy' : 'error';
-        const icon = item.healthy ? '✅' : '❌';
-        
-        html += `
-      <div class="item ${itemClass}">
-        <div class="item-name">${icon} ${item.name}</div>
-        <div class="item-url">${item.url}</div>`;
-        
-        if (item.brokenLinks && item.brokenLinks.length > 0) {
-          html += `<div class="item-detail" style="color: #ff6b6b;">⚠️ נמצאו ${item.brokenLinks.length} לינקים שבורים:</div>`;
-          
-          item.brokenLinks.forEach((link, index) => {
-            html += `
-          <div class="broken-link">
-            <div class="broken-link-title">[${index + 1}] לינק שבור</div>
-            <div class="broken-link-detail"><strong>URL:</strong> <span class="broken-link-url">${link.href}</span></div>
-            <div class="broken-link-detail"><strong>נמצא בעמוד:</strong> ${link.foundOnPage || item.url}</div>
-            <div class="broken-link-detail"><strong>טקסט הלינק:</strong> "${link.text || 'ללא טקסט'}"</div>
-            <div class="broken-link-detail"><strong>סטטוס HTTP:</strong> ${link.statusCode || 'לא זמין'}</div>
-            ${link.error ? `<div class="broken-link-detail"><strong>שגיאה:</strong> ${link.error}</div>` : ''}
-          </div>`;
+        const isHealthy = item.totalBrokenLinks === 0;
+        const itemClass = isHealthy ? 'healthy' : 'error';
+        const icon = isHealthy ? '✅' : '❌';
+        html += `<div class="item ${itemClass}"><div class="item-name">${icon} ${item.siteName}</div><div class="item-url">${item.baseUrl}</div>`;
+        if (item.allBrokenLinks && item.allBrokenLinks.length > 0) {
+          html += `<div class="item-detail" style="color: #ff6b6b;">⚠️ ${item.allBrokenLinks.length} לינקים שבורים:</div>`;
+          item.allBrokenLinks.forEach((link, i) => {
+            html += `<div class="broken-link"><div class="broken-link-title">[${i+1}] לינק שבור</div>`;
+            html += `<div class="broken-link-detail"><strong>URL:</strong> <span class="broken-link-url">${link.url || link.href}</span></div>`;
+            html += `<div class="broken-link-detail"><strong>בעמוד:</strong> ${link.foundOn || item.baseUrl}</div>`;
+            html += `<div class="broken-link-detail"><strong>סטטוס:</strong> ${link.statusCode || 'N/A'}</div>`;
+            if (link.error) html += `<div class="broken-link-detail"><strong>שגיאה:</strong> ${link.error}</div>`;
+            html += `</div>`;
           });
-        } else if (item.healthy) {
+        } else if (isHealthy) {
           html += `<div class="item-detail" style="color: #51cf66;">✓ כל הלינקים תקינים</div>`;
         }
-        
-        if (!item.healthy && this.actionsUrl) {
-          html += `<a href="${this.actionsUrl}" class="logs-link">📋 לוגים מלאים</a>`;
-        }
-        
+        if (!isHealthy) html += `<a href="${this.getActionsLink()}" class="logs-link">📋 לוגים</a>`;
         html += `</div>`;
       });
-      
       html += `</div>`;
     }
 
-    // Footer
-    html += `
-    <div class="footer">
-      <a href="${this.getActionsLink()}" style="color: #ff8c00;">📋 לוגים מלאים ב-GitHub Actions</a><br><br>
-      🦎 QA Iguana Agent v1.3.0 - "שומר על האימפריה 24/7"<br>
-      No Art Gallery © 2026
-    </div>
-  </div>
-</body>
-</html>`;
-
+    html += `<div class="footer"><a href="${this.getActionsLink()}" style="color: #ff8c00;">📋 לוגים מלאים</a><br><br>🦎 QA Iguana Agent v1.3.1<br>No Art Gallery © 2026</div></div></body></html>`;
     return html;
   }
 
-  /**
-   * Generate JSON report
-   */
   generateJsonReport(results, hasIssues) {
     return JSON.stringify({
       meta: {
         generatedAt: new Date().toISOString(),
         checkTime: this.checkTime.toISOString(),
         timezone: this.timezone,
-        version: '1.3.0',
-        hasIssues: hasIssues,
+        version: '1.3.1',
+        hasIssues,
         actionsUrl: this.getActionsLink(),
         runId: this.runId,
         runNumber: this.runNumber
       },
-      results: results
+      results
     }, null, 2);
   }
 }
