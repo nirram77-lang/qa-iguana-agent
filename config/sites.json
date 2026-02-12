@@ -1,9 +1,9 @@
 {
   "meta": {
-    "version": "1.3.0",
-    "lastUpdated": "2026-02-08",
+    "version": "1.3.1",
+    "lastUpdated": "2026-02-12",
     "owner": "Nir Ram - No Art Gallery",
-    "notes": "v1.3.0 - Enhanced reports with timestamps and direct GitHub links"
+    "notes": "v1.3.1 - Fixed SOS Click App URL, added notification-icon check"
   },
   "settings": {
     "alertEmail": "nir@noartgallery.com",
@@ -82,7 +82,7 @@
     {
       "id": "sosclick-app",
       "name": "SOS Click App",
-      "url": "https://app.sosclick.app",
+      "url": "https://www.sosclick.app",
       "type": "app",
       "priority": "critical",
       "languages": ["he", "en"],
@@ -95,7 +95,7 @@
         "screenshots": true
       },
       "pages": [
-        { "path": "/", "name": "Main App" }
+        { "path": "/app", "name": "Main App" }
       ],
       "expectedElements": {
         "sosButton": ".sos-button, #sos-btn",
@@ -218,7 +218,7 @@
     },
     {
       "name": "sos-click",
-      "domains": ["app.sosclick.app"]
+      "domains": ["www.sosclick.app"]
     },
     {
       "name": "sosclick-wow",
