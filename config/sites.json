@@ -1,9 +1,9 @@
 {
   "meta": {
-    "version": "1.3.1",
-    "lastUpdated": "2026-02-12",
+    "version": "1.4.0",
+    "lastUpdated": "2026-02-20",
     "owner": "Nir Ram - No Art Gallery",
-    "notes": "v1.3.1 - Fixed SOS Click App URL, added notification-icon check"
+    "notes": "v1.4.0 - Focused critical checks only. No image/asset scanning. Links = CTA only."
   },
   "settings": {
     "alertEmail": "nir@noartgallery.com",
@@ -15,11 +15,28 @@
       "evening": "19:00"
     },
     "thresholds": {
-      "responseTimeWarning": 3000,
-      "responseTimeCritical": 8000,
+      "responseTimeWarning": 2000,
+      "responseTimeCritical": 5000,
       "sslExpiryWarning": 30,
       "sslExpiryCritical": 7,
-      "requestTimeout": 15000
+      "requestTimeout": 10000
+    },
+    "linkCheck": {
+      "excludePatterns": [
+        "/_next/image",
+        "/cdn-cgi/",
+        "data:",
+        "mailto:",
+        "tel:",
+        "javascript:",
+        "#",
+        ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".webp",
+        ".css", ".js", ".woff", ".woff2", ".ttf", ".map",
+        "cloudflare",
+        "email-protection",
+        "email-decode"
+      ],
+      "onlyCriticalLinks": true
     },
     "github": {
       "owner": "nirram77-lang",
@@ -34,26 +51,18 @@
       "url": "https://i4iguana.com",
       "type": "website",
       "priority": "critical",
-      "languages": ["he", "en", "pt"],
       "checks": {
         "ssl": true,
         "uptime": true,
-        "links": true,
+        "links": false,
         "forms": false,
-        "i18n": true,
-        "screenshots": true
+        "screenshots": false
       },
       "pages": [
-        { "path": "/", "name": "Landing Page (EN)" },
-        { "path": "/he", "name": "Hebrew Landing" },
-        { "path": "/br", "name": "Portuguese Landing" },
-        { "path": "/privacy", "name": "Privacy Policy" },
-        { "path": "/terms", "name": "Terms of Service" }
+        { "path": "/", "name": "Landing Page" },
+        { "path": "/he", "name": "Hebrew Landing" }
       ],
-      "expectedElements": {
-        "logo": ".iguana-logo, .logo, 🦎",
-        "cta": ".cta-button, .download-btn"
-      }
+      "criticalLinks": []
     },
     {
       "id": "i4iguana-app",
@@ -61,23 +70,17 @@
       "url": "https://i4iguana.com",
       "type": "app",
       "priority": "critical",
-      "languages": ["he", "en"],
       "checks": {
         "ssl": true,
         "uptime": true,
-        "links": true,
-        "forms": true,
-        "i18n": true,
-        "screenshots": true
+        "links": false,
+        "forms": false,
+        "screenshots": false
       },
       "pages": [
-        { "path": "/app", "name": "Main App" },
-        { "path": "/admin/super", "name": "Super Admin Panel" }
+        { "path": "/app", "name": "Main App" }
       ],
-      "expectedElements": {
-        "logo": ".iguana-logo, .logo, 🦎",
-        "navigation": "nav, .nav, .bottom-nav"
-      }
+      "criticalLinks": []
     },
     {
       "id": "sosclick-app",
@@ -85,22 +88,18 @@
       "url": "https://www.sosclick.app",
       "type": "app",
       "priority": "critical",
-      "languages": ["he", "en"],
       "checks": {
         "ssl": true,
         "uptime": true,
-        "links": true,
+        "links": false,
         "forms": false,
-        "i18n": true,
-        "screenshots": true
+        "screenshots": false
       },
       "pages": [
+        { "path": "/", "name": "Home" },
         { "path": "/app", "name": "Main App" }
       ],
-      "expectedElements": {
-        "sosButton": ".sos-button, #sos-btn",
-        "navigation": "nav, .bottom-nav"
-      }
+      "criticalLinks": []
     },
     {
       "id": "sosclick-website",
@@ -108,69 +107,53 @@
       "url": "https://sosclick.app",
       "type": "website",
       "priority": "critical",
-      "languages": ["he", "en"],
       "checks": {
         "ssl": true,
         "uptime": true,
-        "links": true,
+        "links": false,
         "forms": false,
-        "i18n": false,
-        "screenshots": true
+        "screenshots": false
       },
       "pages": [
-        { "path": "/", "name": "Landing Page" },
-        { "path": "/privacy", "name": "Privacy Policy" },
-        { "path": "/terms", "name": "Terms of Service" }
+        { "path": "/", "name": "Landing Page" }
       ],
-      "expectedElements": {
-        "cta": ".cta-button, .download-btn",
-        "features": ".features, .feature-list"
-      }
+      "criticalLinks": []
     },
     {
       "id": "noartgallery",
       "name": "No Art Gallery",
       "url": "https://noartgallery.com",
       "type": "website",
-      "priority": "critical",
-      "languages": ["en"],
+      "priority": "high",
       "checks": {
         "ssl": true,
         "uptime": true,
-        "links": true,
-        "forms": true,
-        "i18n": false,
-        "screenshots": true
+        "links": false,
+        "forms": false,
+        "screenshots": false
       },
       "pages": [
-        { "path": "/", "name": "Home" },
-        { "path": "/accessibility.html", "name": "Accessibility" },
-        { "path": "/privacy.html", "name": "Privacy" },
-        { "path": "/terms.html", "name": "Terms" }
+        { "path": "/", "name": "Home" }
       ],
-      "expectedElements": {
-        "portals": ".portal-card",
-        "footer": "footer"
-      }
+      "criticalLinks": []
     },
     {
       "id": "funnydates-he",
       "name": "FunnyDates Hebrew",
       "url": "https://funnydates101.co.il",
       "type": "website",
-      "priority": "critical",
-      "languages": ["he"],
+      "priority": "high",
       "checks": {
         "ssl": true,
         "uptime": true,
-        "links": true,
-        "forms": true,
-        "i18n": false,
-        "screenshots": true
+        "links": false,
+        "forms": false,
+        "screenshots": false
       },
       "pages": [
         { "path": "/", "name": "Home" }
-      ]
+      ],
+      "criticalLinks": []
     },
     {
       "id": "funnydates-en",
@@ -178,18 +161,17 @@
       "url": "https://funnydates101.com",
       "type": "website",
       "priority": "high",
-      "languages": ["en"],
       "checks": {
         "ssl": true,
         "uptime": true,
-        "links": true,
+        "links": false,
         "forms": false,
-        "i18n": false,
-        "screenshots": true
+        "screenshots": false
       },
       "pages": [
         { "path": "/", "name": "Home" }
-      ]
+      ],
+      "criticalLinks": []
     },
     {
       "id": "gocio",
@@ -197,24 +179,23 @@
       "url": "https://gocio.org",
       "type": "website",
       "priority": "medium",
-      "languages": ["he"],
       "checks": {
         "ssl": true,
         "uptime": true,
-        "links": true,
-        "forms": true,
-        "i18n": false,
+        "links": false,
+        "forms": false,
         "screenshots": false
       },
       "pages": [
         { "path": "/", "name": "Home" }
-      ]
+      ],
+      "criticalLinks": []
     }
   ],
   "vercelProjects": [
     {
       "name": "here-4-iguana",
-      "domains": ["i4iguana.com", "www.i4iguana.com", "here-4-iguana.vercel.app"]
+      "domains": ["i4iguana.com", "www.i4iguana.com"]
     },
     {
       "name": "sos-click",
