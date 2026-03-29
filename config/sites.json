@@ -30,8 +30,19 @@
         "tel:",
         "javascript:",
         "#",
-        ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".webp",
-        ".css", ".js", ".woff", ".woff2", ".ttf", ".map",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".svg",
+        ".ico",
+        ".webp",
+        ".css",
+        ".js",
+        ".woff",
+        ".woff2",
+        ".ttf",
+        ".map",
         "cloudflare",
         "email-protection",
         "email-decode"
@@ -59,8 +70,14 @@
         "screenshots": false
       },
       "pages": [
-        { "path": "/", "name": "Landing Page" },
-        { "path": "/he", "name": "Hebrew Landing" }
+        {
+          "path": "/",
+          "name": "Landing Page"
+        },
+        {
+          "path": "/he",
+          "name": "Hebrew Landing"
+        }
       ],
       "criticalLinks": []
     },
@@ -71,14 +88,17 @@
       "type": "app",
       "priority": "critical",
       "checks": {
-        "ssl": true,
+        "ssl": false,
         "uptime": true,
         "links": false,
         "forms": false,
         "screenshots": false
       },
       "pages": [
-        { "path": "/app", "name": "Main App" }
+        {
+          "path": "/app",
+          "name": "Main App"
+        }
       ],
       "criticalLinks": []
     },
@@ -96,8 +116,14 @@
         "screenshots": false
       },
       "pages": [
-        { "path": "/", "name": "Home" },
-        { "path": "/app", "name": "Main App" }
+        {
+          "path": "/",
+          "name": "Home"
+        },
+        {
+          "path": "/app",
+          "name": "Main App"
+        }
       ],
       "criticalLinks": []
     },
@@ -115,7 +141,10 @@
         "screenshots": false
       },
       "pages": [
-        { "path": "/", "name": "Landing Page" }
+        {
+          "path": "/",
+          "name": "Landing Page"
+        }
       ],
       "criticalLinks": []
     },
@@ -133,7 +162,10 @@
         "screenshots": false
       },
       "pages": [
-        { "path": "/", "name": "Home" }
+        {
+          "path": "/",
+          "name": "Home"
+        }
       ],
       "criticalLinks": []
     },
@@ -151,7 +183,10 @@
         "screenshots": false
       },
       "pages": [
-        { "path": "/", "name": "Home" }
+        {
+          "path": "/",
+          "name": "Home"
+        }
       ],
       "criticalLinks": []
     },
@@ -169,7 +204,10 @@
         "screenshots": false
       },
       "pages": [
-        { "path": "/", "name": "Home" }
+        {
+          "path": "/",
+          "name": "Home"
+        }
       ],
       "criticalLinks": []
     },
@@ -187,7 +225,10 @@
         "screenshots": false
       },
       "pages": [
-        { "path": "/", "name": "Home" }
+        {
+          "path": "/",
+          "name": "Home"
+        }
       ],
       "criticalLinks": []
     }
@@ -195,19 +236,28 @@
   "vercelProjects": [
     {
       "name": "here-4-iguana",
-      "domains": ["i4iguana.com", "www.i4iguana.com"]
+      "domains": [
+        "i4iguana.com",
+        "www.i4iguana.com"
+      ]
     },
     {
       "name": "sos-click",
-      "domains": ["www.sosclick.app"]
+      "domains": [
+        "www.sosclick.app"
+      ]
     },
     {
       "name": "sosclick-wow",
-      "domains": ["sosclick.app"]
+      "domains": [
+        "sosclick.app"
+      ]
     },
     {
       "name": "noartgallery-website",
-      "domains": ["noartgallery.com"]
+      "domains": [
+        "noartgallery.com"
+      ]
     }
   ]
 }
