@@ -43,7 +43,11 @@ jobs:
           ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
           BACKUP_EMAIL: ${{ secrets.BACKUP_EMAIL }}
         run: node index.js --full-report --send-email
-      
+
+      - name: Run Audiobook Monitor
+        continue-on-error: true
+        run: node audiobook-monitor.js
+
       - name: Upload Report Artifacts
         uses: actions/upload-artifact@v4
         if: always()
