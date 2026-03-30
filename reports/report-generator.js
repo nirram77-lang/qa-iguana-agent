@@ -269,6 +269,29 @@ class ReportGenerator {
       }
     }
     
+
+    // Audiobook Monitor Section
+    if (results.audiobook) {
+      report.push('-'.repeat(60));
+      report.push('🎧 ספרי אודיו — Love Bites');
+      report.push('-'.repeat(60));
+      const ab = results.audiobook;
+      const found = ab.foundPlatforms || [];
+      const notYet = ab.notYetPlatforms || [];
+      report.push('✅ פורסם ב-' + found.length + ' פלטפורמות  |  ⏳ ממתין ב-' + notYet.length + ' פלטפורמות');
+      report.push('');
+      if (found.length > 0) {
+        report.push('✅ נמצא בחנויות:');
+        found.forEach(p => report.push('   🎵 ' + p.name + ': ' + p.url));
+        report.push('');
+      }
+      if (notYet.length > 0) {
+        report.push('⏳ עדיין לא הופיע:');
+        notYet.forEach(p => report.push('   ⌛ ' + p.name));
+        report.push('');
+      }
+    }
+
     // Summary of all issues
     if (hasIssues) {
       report.push('─'.repeat(60));
@@ -471,6 +494,32 @@ class ReportGenerator {
         html += `</div>`;
       });
       html += `</div>`;
+    }
+
+
+    // Audiobook Monitor Section
+    if (results.audiobook) {
+      const ab = results.audiobook;
+      const found = ab.foundPlatforms || [];
+      const notYet = ab.notYetPlatforms || [];
+      const abColor = found.length > 0 ? '#51cf66' : '#ffd43b';
+      html += '<div class="section"><div class="section-title">🎧 ספרי אודיו — Love Bites</div>';
+      html += '<div class="item" style="border-right:4px solid ' + abColor + '">';
+      html += '<div class="item-name">📊 סטטוס פרסום</div>';
+      html += '<div class="item-detail">✅ פורסם ב-<strong style="color:#51cf66">' + found.length + '</strong> פלטפורמות  |  ⏳ ממתין ב-<strong style="color:#ffd43b">' + notYet.length + '</strong> פלטפורמות</div></div>';
+      found.forEach(p => {
+        html += '<div class="item healthy">';
+        html += '<div class="item-name">✅ ' + p.name + '</div>';
+        html += '<div class="item-url"><a href="' + p.url + '" style="color:#4ade80">' + p.url + '</a></div>';
+        html += '</div>';
+      });
+      if (notYet.length > 0) {
+        html += '<div class="item" style="border-right:4px solid #ffd43b">';
+        html += '<div class="item-name" style="color:#ffd43b">⏳ ממתין להופעה (' + notYet.length + ' פלטפורמות):</div>';
+        notYet.forEach(p => { html += '<div class="item-detail">⌛ ' + p.name + '</div>'; });
+        html += '</div>';
+      }
+      html += '</div>';
     }
 
     // Summary section if issues exist
