@@ -33,7 +33,11 @@ jobs:
       
       - name: Install Dependencies
         run: npm install
-      
+
+      - name: Run Audiobook Monitor
+        continue-on-error: true
+        run: node audiobook-monitor.js
+
       - name: Run QA Iguana Agent
         env:
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
@@ -42,11 +46,8 @@ jobs:
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
           ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
           BACKUP_EMAIL: ${{ secrets.BACKUP_EMAIL }}
+          AUDIOBOOK_REPORT: reports/output/audiobook-monitor.json
         run: node index.js --full-report --send-email
-
-      - name: Run Audiobook Monitor
-        continue-on-error: true
-        run: node audiobook-monitor.js
 
       - name: Upload Report Artifacts
         uses: actions/upload-artifact@v4
