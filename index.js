@@ -188,17 +188,20 @@ async function main() {
   }
   
 
-  // Load Audiobook Monitor results (runs before this step in workflow)
+  // Load Audiobook Monitor results
   const audiobookReportPath = path.join(__dirname, 'reports', 'output', 'audiobook-monitor.json');
+  console.log('🎧 Looking for audiobook report at: ' + audiobookReportPath);
   if (fs.existsSync(audiobookReportPath)) {
     try {
       results.audiobook = JSON.parse(fs.readFileSync(audiobookReportPath, 'utf8'));
-      console.log('🎧 Audiobook monitor data loaded: ' + (results.audiobook.foundPlatforms || []).length + ' platforms found');
+      const found = (results.audiobook.foundPlatforms || []).length;
+      const notYet = (results.audiobook.notYetPlatforms || []).length;
+      console.log('✅ Audiobook data loaded: ' + found + ' found, ' + notYet + ' pending');
     } catch(e) {
-      console.log('⚠️ Could not load audiobook monitor data: ' + e.message);
+      console.log('⚠️ Failed to parse audiobook JSON: ' + e.message);
     }
   } else {
-    console.log('⚠️ Audiobook monitor JSON not found - run audiobook-monitor.js first');
+    console.log('⚠️ audiobook-monitor.json not found - audiobook step may have failed');
   }
 
   // Generate report
