@@ -312,9 +312,8 @@ async function runAudiobookMonitor() {
     console.log(`⏳ לא נמצא ב-${notYet.length} פלטפורמות (עדיין)`);
     console.log(`❓ לא נגיש: ${unreachable.length} פלטפורמות`);
     console.log('═══════════════════════════════════════════════\n');
+    saveResults(); // תמיד — גם אם קרסנו
   }
-
-  return saveResults();
 }
 
 module.exports = { runAudiobookMonitor };
