@@ -253,76 +253,68 @@ async function runAudiobookMonitor() {
   console.log('');
 
   const results = [];
-
-  for (const platform of PLATFORM_CHECKS) {
-    process.stdout.write(`  ${platform.emoji} ${platform.name.padEnd(18)}`);
-    try {
-      const result = await platform.fn();
-      results.push({ ...platform, ...result, fn: undefined });
-      if (result.found) {
-        console.log(`✅ נמצא! ${result.books.length} ספר/ים`);
-        result.books.forEach(b => console.log(`     📘 ${b.title}`));
-      } else if (result.status === 'timeout') {
-        console.log(`⏱️  timeout`);
-      } else if (result.status === 'error') {
-        console.log(`❌ שגיאת חיבור`);
-      } else {
-        console.log(`⏳ לא נמצא עדיין (HTTP ${result.status})`);
-      }
-    } catch(e) {
-      console.log(`❌ ${e.message}`);
-      results.push({ ...platform, found: false, status: 'exception', books: [], fn: undefined });
-    }
-  }
-
-  // סיכום
-  const found = results.filter(r => r.found);
-  const notYet = results.filter(r => !r.found && (r.status === 200 || r.status === 301 || r.status === 302));
-  const unreachable = results.filter(r => !r.found && r.status !== 200 && r.status !== 301 && r.status !== 302);
-
-  console.log('\n═══════════════════════════════════════════════');
-  console.log(`✅ פורסם ב-${found.length} פלטפורמות`);
-  if (found.length > 0) {
-    found.forEach(r => console.log(`   ${r.emoji} ${r.name}: ${r.directUrl}`));
-  }
-  console.log(`⏳ לא נמצא ב-${notYet.length} פלטפורמות (עדיין)`);
-  console.log(`❓ לא נגיש: ${unreachable.length} פלטפורמות`);
-  console.log('═══════════════════════════════════════════════\n');
-
-  // שמור דוח
   const fs = require('fs');
   const outputDir = './reports/output';
-  if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
 
-  const reportData = {
-    timestamp: new Date().toISOString(),
-    checkDate: startTime.toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' }),
-    summary: {
-      total: results.length,
-      found: found.length,
-      notYet: notYet.length,
-      unreachable: unreachable.length
-    },
-    foundPlatforms: found.map(r => ({
-      name: r.name,
-      url: r.directUrl,
-      books: r.books
-    })),
-    notYetPlatforms: notYet.map(r => ({
-      name: r.name,
-      url: r.directUrl
-    })),
-    unreachablePlatforms: unreachable.map(r => ({
-      name: r.name,
-      url: r.directUrl,
-      status: r.status
-    }))
+  const saveResults = () => {
+    try {
+      const found = results.filter(r => r.found);
+      const notYet = results.filter(r => !r.found && (r.status === 200 || r.status === 301 || r.status === 302));
+      const unreachable = results.filter(r => !r.found && r.status !== 200 && r.status !== 301 && r.status !== 302);
+      if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
+      const reportData = {
+        timestamp: new Date().toISOString(),
+        checkDate: startTime.toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' }),
+        summary: { total: PLATFORM_CHECKS.length, checked: results.length, found: found.length, notYet: notYet.length, unreachable: unreachable.length },
+        foundPlatforms: found.map(r => ({ name: r.name, url: r.directUrl, books: r.books })),
+        notYetPlatforms: notYet.map(r => ({ name: r.name, url: r.directUrl })),
+        unreachablePlatforms: unreachable.map(r => ({ name: r.name, url: r.directUrl, status: r.status }))
+      };
+      fs.writeFileSync(`${outputDir}/audiobook-monitor.json`, JSON.stringify(reportData, null, 2));
+      console.log(`📄 דוח נשמר (${results.length}/${PLATFORM_CHECKS.length} פלטפורמות): ${outputDir}/audiobook-monitor.json`);
+      return reportData;
+    } catch(e) {
+      console.log(`❌ שגיאה בשמירת דוח: ${e.message}`);
+      return null;
+    }
   };
 
-  fs.writeFileSync(`${outputDir}/audiobook-monitor.json`, JSON.stringify(reportData, null, 2));
-  console.log(`📄 דוח נשמר: ${outputDir}/audiobook-monitor.json`);
+  try {
+    for (const platform of PLATFORM_CHECKS) {
+      process.stdout.write(`  ${platform.emoji} ${platform.name.padEnd(18)}`);
+      try {
+        const result = await platform.fn();
+        results.push({ ...platform, ...result, fn: undefined });
+        if (result.found) {
+          console.log(`✅ נמצא! ${result.books.length} ספר/ים`);
+          result.books.forEach(b => console.log(`     📘 ${b.title}`));
+        } else if (result.status === 'timeout') {
+          console.log(`⏱️  timeout`);
+        } else if (result.status === 'error') {
+          console.log(`❌ שגיאת חיבור`);
+        } else {
+          console.log(`⏳ לא נמצא עדיין (HTTP ${result.status})`);
+        }
+      } catch(e) {
+        console.log(`❌ ${e.message}`);
+        results.push({ ...platform, found: false, status: 'exception', books: [], fn: undefined });
+      }
+    }
+  } finally {
+    // שמירה תמיד — גם אם קרסנו באמצע
+    const found = results.filter(r => r.found);
+    const notYet = results.filter(r => !r.found && (r.status === 200 || r.status === 301 || r.status === 302));
+    const unreachable = results.filter(r => !r.found && r.status !== 200 && r.status !== 301 && r.status !== 302);
 
-  return reportData;
+    console.log('\n═══════════════════════════════════════════════');
+    console.log(`✅ פורסם ב-${found.length} פלטפורמות`);
+    if (found.length > 0) found.forEach(r => console.log(`   ${r.emoji} ${r.name}: ${r.directUrl}`));
+    console.log(`⏳ לא נמצא ב-${notYet.length} פלטפורמות (עדיין)`);
+    console.log(`❓ לא נגיש: ${unreachable.length} פלטפורמות`);
+    console.log('═══════════════════════════════════════════════\n');
+  }
+
+  return saveResults();
 }
 
 module.exports = { runAudiobookMonitor };
