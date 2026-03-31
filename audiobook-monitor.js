@@ -303,6 +303,7 @@ async function runAudiobookMonitor() {
         console.log(`❌ ${e.message}`);
         results.push({ ...platform, found: false, status: 'exception', books: [], fn: undefined });
       }
+      writeJson(results); // שומר אחרי כל פלטפורמה — גם אם נהרגים אחר כך
     }
   } finally {
     // שמירה תמיד — גם אם קרסנו באמצע
