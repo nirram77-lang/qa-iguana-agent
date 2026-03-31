@@ -75,9 +75,11 @@ async function checkAppleBooks() {
   if (r.status !== 200) return { found: false, status: r.status, books: [] };
   try {
     const data = JSON.parse(r.body);
-    const books = (data.results || []).filter(b =>
-      matchesAnyTitle(b.artistName) || matchesAnyTitle(b.collectionName)
-    );
+    const books = (data.results || []).filter(b => {
+      const isNirRam = (b.artistName || '').toLowerCase().includes('nir ram');
+      const hasTitle = matchesAnyTitle(b.collectionName);
+      return isNirRam && hasTitle; // חייב גם מחבר וגם כותרת
+    });
     return {
       found: books.length > 0,
       status: 200,
