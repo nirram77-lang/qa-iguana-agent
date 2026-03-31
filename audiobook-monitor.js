@@ -1,9 +1,36 @@
 /**
- * 🎧 Audiobook Monitor v2.0 — Love Bites / Nir Ram
+ * 🎧 Audiobook Monitor v2.1 — 14 Languages — Love Bites / Nir Ram
  * חיפוש ישיר ב-API של כל פלטפורמה
  */
 
 const https = require('https');
+
+// ========================================
+// כל כותרות הספר ב-14 שפות
+// ========================================
+const BOOK_TITLES = [
+  'nir ram',
+  'love bites',
+  'dating disasters',
+  '101 dating disasters',
+  'romantik fiyasko',
+  'dates en geen beet',
+  'liebes-desaster',
+  "disastri d'amore",
+  'citas desastrosas',
+  'encontros desastrosos',
+  'désastres amoureux',
+  'любовная катастрофа',
+  'dezastre amoroase',
+  'דייטים ואף נשיכה',
+  'مواعيد كارثية',
+  'デート大失敗',
+];
+
+function matchesAnyTitle(text) {
+  const t = (text || '').toLowerCase();
+  return BOOK_TITLES.some(title => t.includes(title.toLowerCase()));
+}
 
 // ========================================
 // פונקציית fetch בסיסית
@@ -49,9 +76,7 @@ async function checkAppleBooks() {
   try {
     const data = JSON.parse(r.body);
     const books = (data.results || []).filter(b =>
-      (b.artistName || '').toLowerCase().includes('nir ram') ||
-      (b.collectionName || '').toLowerCase().includes('love bites') ||
-      (b.collectionName || '').toLowerCase().includes('dating disasters')
+      matchesAnyTitle(b.artistName) || matchesAnyTitle(b.collectionName)
     );
     return {
       found: books.length > 0,
@@ -73,12 +98,11 @@ async function checkAudible() {
   });
   if (r.status === 'timeout' || r.status === 'error') return { found: false, status: r.status, books: [] };
   const bodyLower = r.body.toLowerCase();
-  const found = bodyLower.includes('nir ram') || 
-                (bodyLower.includes('love bites') && bodyLower.includes('dating'));
+  const found = matchesAnyTitle(r.body);
   const books = [];
   if (found) {
     // חפש כותרים
-    const matches = r.body.match(/aria-label="([^"]*(?:love bites|nir ram|dating disasters)[^"]*)"/gi) || [];
+    const matches = r.body.match(/aria-label="([^"]*(?:love bites|nir ram|dating disasters|romantik fiyasko|desastrosas|desastrosos|désastres|катастрофа|fiyasko|disastri|dezastre)[^"]*)"/gi) || [];
     matches.forEach(m => {
       const title = m.replace(/aria-label="/i, '').replace(/"$/, '');
       if (title.length < 200) books.push({ title, url: 'https://www.audible.com/search?keywords=Nir+Ram' });
@@ -94,7 +118,7 @@ async function checkKobo() {
   const r = await fetchUrl(url);
   if (r.status === 'timeout' || r.status === 'error') return { found: false, status: r.status, books: [] };
   const bodyLower = r.body.toLowerCase();
-  const found = bodyLower.includes('nir ram') || bodyLower.includes('love bites');
+  const found = matchesAnyTitle(r.body);
   return {
     found,
     status: r.status,
@@ -108,7 +132,7 @@ async function checkSpotify() {
   const r = await fetchUrl(url);
   if (r.status === 'timeout' || r.status === 'error') return { found: false, status: r.status, books: [] };
   const bodyLower = r.body.toLowerCase();
-  const found = bodyLower.includes('nir ram') || bodyLower.includes('love bites');
+  const found = matchesAnyTitle(r.body);
   return { found, status: r.status, books: found ? [{ title: 'Love Bites - Nir Ram', url: 'https://open.spotify.com/search/Nir%20Ram/audiobooks' }] : [] };
 }
 
@@ -117,7 +141,7 @@ async function checkGooglePlay() {
   const r = await fetchUrl(url);
   if (r.status === 'timeout' || r.status === 'error') return { found: false, status: r.status, books: [] };
   const bodyLower = r.body.toLowerCase();
-  const found = bodyLower.includes('nir ram') || (bodyLower.includes('love bites') && bodyLower.includes('dating'));
+  const found = matchesAnyTitle(r.body);
   return { found, status: r.status, books: found ? [{ title: 'Love Bites - Nir Ram', url: 'https://play.google.com/store/search?q=Nir+Ram&c=books' }] : [] };
 }
 
@@ -126,7 +150,7 @@ async function checkEverand() {
   const r = await fetchUrl(url);
   if (r.status === 'timeout' || r.status === 'error') return { found: false, status: r.status, books: [] };
   const bodyLower = r.body.toLowerCase();
-  const found = bodyLower.includes('nir ram') || bodyLower.includes('love bites');
+  const found = matchesAnyTitle(r.body);
   return { found, status: r.status, books: found ? [{ title: 'Love Bites - Nir Ram', url: 'https://www.everand.com/search?query=Nir+Ram' }] : [] };
 }
 
@@ -139,14 +163,13 @@ async function checkStorytell() {
     const data = JSON.parse(r.body);
     const items = data.books || data.results || data.audiobooks || [];
     const found = items.some(b =>
-      (b.title || '').toLowerCase().includes('love bites') ||
-      (b.authors || []).some(a => (a.name || '').toLowerCase().includes('nir ram'))
+      matchesAnyTitle(b.title) ||
+      (b.authors || []).some(a => matchesAnyTitle(a.name))
     );
     return { found, status: 200, books: found ? items.filter(b => b.title?.toLowerCase().includes('love bites')).map(b => ({ title: b.title, url: `https://www.storytel.com/il/${b.id}` })) : [] };
   } catch(e) {
     // נסה HTML
-    const bodyLower = r.body.toLowerCase();
-    const found = bodyLower.includes('nir ram') || bodyLower.includes('love bites');
+    const found = matchesAnyTitle(r.body);
     return { found, status: r.status, books: [] };
   }
 }
@@ -156,7 +179,7 @@ async function checkChirp() {
   const r = await fetchUrl(url);
   if (r.status === 'timeout' || r.status === 'error') return { found: false, status: r.status, books: [] };
   const bodyLower = r.body.toLowerCase();
-  const found = bodyLower.includes('nir ram') || bodyLower.includes('love bites');
+  const found = matchesAnyTitle(r.body);
   return { found, status: r.status, books: found ? [{ title: 'Love Bites - Nir Ram', url: 'https://www.chirpbooks.com/audiobooks?search=Nir+Ram' }] : [] };
 }
 
@@ -165,7 +188,7 @@ async function checkBookmate() {
   const r = await fetchUrl(url);
   if (r.status === 'timeout' || r.status === 'error') return { found: false, status: r.status, books: [] };
   const bodyLower = r.body.toLowerCase();
-  const found = bodyLower.includes('nir ram') || bodyLower.includes('love bites');
+  const found = matchesAnyTitle(r.body);
   return { found, status: r.status, books: found ? [{ title: 'Love Bites - Nir Ram', url: 'https://bookmate.com/search?query=nir+ram' }] : [] };
 }
 
@@ -174,7 +197,7 @@ async function checkNextory() {
   const r = await fetchUrl(url);
   if (r.status === 'timeout' || r.status === 'error') return { found: false, status: r.status, books: [] };
   const bodyLower = r.body.toLowerCase();
-  const found = bodyLower.includes('nir ram') || bodyLower.includes('love bites');
+  const found = matchesAnyTitle(r.body);
   return { found, status: r.status, books: found ? [{ title: 'Love Bites - Nir Ram', url: 'https://www.nextory.com/en/search/?q=Nir+Ram' }] : [] };
 }
 
@@ -183,7 +206,7 @@ async function checkAudiobooksCom() {
   const r = await fetchUrl(url);
   if (r.status === 'timeout' || r.status === 'error') return { found: false, status: r.status, books: [] };
   const bodyLower = r.body.toLowerCase();
-  const found = bodyLower.includes('nir ram') || bodyLower.includes('love bites');
+  const found = matchesAnyTitle(r.body);
   return { found, status: r.status, books: found ? [{ title: 'Love Bites - Nir Ram', url: 'https://www.audiobooks.com/search?q=Nir+Ram' }] : [] };
 }
 
@@ -196,8 +219,8 @@ async function checkOverdrive() {
     const data = JSON.parse(r.body);
     const items = data.items || [];
     const found = items.some(b =>
-      (b.title || '').toLowerCase().includes('love bites') ||
-      (b.creators || []).some(c => (c.name || '').toLowerCase().includes('nir ram'))
+      matchesAnyTitle(b.title) ||
+      (b.creators || []).some(c => matchesAnyTitle(c.name))
     );
     return { found, status: 200, books: found ? items.map(b => ({ title: b.title, url: `https://www.overdrive.com/media/${b.id}` })) : [] };
   } catch(e) { return { found: false, status: 'parse_error', books: [] }; }
@@ -291,6 +314,7 @@ async function runAudiobookMonitor() {
     })),
     unreachablePlatforms: unreachable.map(r => ({
       name: r.name,
+      url: r.directUrl,
       status: r.status
     }))
   };
