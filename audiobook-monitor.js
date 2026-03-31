@@ -256,28 +256,32 @@ async function runAudiobookMonitor() {
   const fs = require('fs');
   const outputDir = './reports/output';
 
-  const saveResults = () => {
+  // כותב JSON ריק מיד — גם אם הכל קורס, הקובץ קיים
+  const writeJson = (checked) => {
     try {
-      const found = results.filter(r => r.found);
-      const notYet = results.filter(r => !r.found && (r.status === 200 || r.status === 301 || r.status === 302));
-      const unreachable = results.filter(r => !r.found && r.status !== 200 && r.status !== 301 && r.status !== 302);
+      const found = checked.filter(r => r.found);
+      const notYet = checked.filter(r => !r.found && (r.status === 200 || r.status === 301 || r.status === 302));
+      const unreachable = checked.filter(r => !r.found && r.status !== 200 && r.status !== 301 && r.status !== 302);
       if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
-      const reportData = {
+      const data = {
         timestamp: new Date().toISOString(),
         checkDate: startTime.toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' }),
-        summary: { total: PLATFORM_CHECKS.length, checked: results.length, found: found.length, notYet: notYet.length, unreachable: unreachable.length },
-        foundPlatforms: found.map(r => ({ name: r.name, url: r.directUrl, books: r.books })),
+        summary: { total: PLATFORM_CHECKS.length, checked: checked.length, found: found.length, notYet: notYet.length, unreachable: unreachable.length },
+        foundPlatforms: found.map(r => ({ name: r.name, url: r.directUrl, books: r.books || [] })),
         notYetPlatforms: notYet.map(r => ({ name: r.name, url: r.directUrl })),
         unreachablePlatforms: unreachable.map(r => ({ name: r.name, url: r.directUrl, status: r.status }))
       };
-      fs.writeFileSync(`${outputDir}/audiobook-monitor.json`, JSON.stringify(reportData, null, 2));
-      console.log(`📄 דוח נשמר (${results.length}/${PLATFORM_CHECKS.length} פלטפורמות): ${outputDir}/audiobook-monitor.json`);
-      return reportData;
+      fs.writeFileSync(`${outputDir}/audiobook-monitor.json`, JSON.stringify(data, null, 2));
+      return data;
     } catch(e) {
-      console.log(`❌ שגיאה בשמירת דוח: ${e.message}`);
+      console.log(`❌ writeJson error: ${e.message}`);
       return null;
     }
   };
+
+  // כותב קובץ ריק מיד בהתחלה — גם אם הכל קורס אחר כך
+  writeJson([]);
+  console.log(`📄 קובץ JSON נוצר (ריק)`);
 
   try {
     for (const platform of PLATFORM_CHECKS) {
@@ -312,7 +316,9 @@ async function runAudiobookMonitor() {
     console.log(`⏳ לא נמצא ב-${notYet.length} פלטפורמות (עדיין)`);
     console.log(`❓ לא נגיש: ${unreachable.length} פלטפורמות`);
     console.log('═══════════════════════════════════════════════\n');
-    saveResults(); // תמיד — גם אם קרסנו
+    // עדכון סופי של ה-JSON עם כל התוצאות
+    writeJson(results);
+    console.log(`📄 דוח סופי נשמר: ${outputDir}/audiobook-monitor.json`);
   }
 }
 
