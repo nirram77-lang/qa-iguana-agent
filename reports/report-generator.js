@@ -502,23 +502,50 @@ class ReportGenerator {
       const ab = results.audiobook;
       const found = ab.foundPlatforms || [];
       const notYet = ab.notYetPlatforms || [];
-      const abColor = found.length > 0 ? '#51cf66' : '#ffd43b';
+      const unreachable = ab.unreachablePlatforms || [];
+      const total = found.length + notYet.length + unreachable.length;
       html += '<div class="section"><div class="section-title">🎧 ספרי אודיו — Love Bites</div>';
-      html += '<div class="item" style="border-right:4px solid ' + abColor + '">';
-      html += '<div class="item-name">📊 סטטוס פרסום</div>';
-      html += '<div class="item-detail">✅ פורסם ב-<strong style="color:#51cf66">' + found.length + '</strong> פלטפורמות  |  ⏳ ממתין ב-<strong style="color:#ffd43b">' + notYet.length + '</strong> פלטפורמות</div></div>';
-      found.forEach(p => {
-        html += '<div class="item healthy">';
-        html += '<div class="item-name">✅ ' + p.name + '</div>';
-        html += '<div class="item-url"><a href="' + p.url + '" style="color:#4ade80">' + p.url + '</a></div>';
-        html += '</div>';
-      });
-      if (notYet.length > 0) {
-        html += '<div class="item" style="border-right:4px solid #ffd43b">';
-        html += '<div class="item-name" style="color:#ffd43b">⏳ ממתין להופעה (' + notYet.length + ' פלטפורמות):</div>';
-        notYet.forEach(p => { html += '<div class="item-detail">⌛ ' + p.name + '</div>'; });
-        html += '</div>';
+      html += '<div class="item" style="border-right:4px solid #4ade80; margin-bottom:8px;">';
+      html += '<div class="item-name">📊 סטטוס פרסום — ' + new Date(ab.timestamp || Date.now()).toLocaleDateString('he-IL') + '</div>';
+      html += '<div class="item-detail">✅ אושר: <strong style="color:#51cf66">' + found.length + '</strong> &nbsp;|&nbsp; ⏳ ממתין: <strong style="color:#ffd43b">' + notYet.length + '</strong> &nbsp;|&nbsp; ❓ לא נגיש: <strong style="color:#888">' + unreachable.length + '</strong> &nbsp;|&nbsp; סה"כ: ' + total + '</div>';
+      html += '</div>';
+
+      // Found platforms — green with direct link
+      if (found.length > 0) {
+        html += '<div style="margin:6px 0 4px;font-weight:bold;color:#51cf66;font-size:13px;">✅ פורסם (' + found.length + '):</div>';
+        found.forEach(p => {
+          html += '<div class="item healthy" style="padding:8px 12px;margin-bottom:4px;">';
+          html += '<div class="item-name" style="font-size:14px;">✅ ' + p.name + '</div>';
+          html += '<div class="item-url"><a href="' + p.url + '" style="color:#4ade80;word-break:break-all;">' + p.url + '</a></div>';
+          if (p.books && p.books.length > 0) {
+            p.books.forEach(b => { if (b.url && b.url !== p.url) html += '<div class="item-detail" style="font-size:11px;">📘 <a href="' + b.url + '" style="color:#86efac;">' + (b.title || b.url) + '</a></div>'; });
+          }
+          html += '</div>';
+        });
       }
+
+      // Not-yet platforms — yellow with direct search link
+      if (notYet.length > 0) {
+        html += '<div style="margin:8px 0 4px;font-weight:bold;color:#ffd43b;font-size:13px;">⏳ ממתין להופעה (' + notYet.length + '):</div>';
+        notYet.forEach(p => {
+          html += '<div class="item" style="border-right:4px solid #ffd43b;padding:8px 12px;margin-bottom:4px;">';
+          html += '<div class="item-name" style="font-size:14px;">⏳ ' + p.name + '</div>';
+          if (p.url) html += '<div class="item-url"><a href="' + p.url + '" style="color:#ffd43b;word-break:break-all;">🔍 ' + p.url + '</a></div>';
+          html += '</div>';
+        });
+      }
+
+      // Unreachable platforms — grey, still with link
+      if (unreachable.length > 0) {
+        html += '<div style="margin:8px 0 4px;font-weight:bold;color:#888;font-size:13px;">❓ לא נגיש (' + unreachable.length + '):</div>';
+        unreachable.forEach(p => {
+          html += '<div class="item" style="border-right:4px solid #555;padding:8px 12px;margin-bottom:4px;">';
+          html += '<div class="item-name" style="font-size:14px;color:#888;">❓ ' + p.name + '</div>';
+          if (p.url) html += '<div class="item-url"><a href="' + p.url + '" style="color:#aaa;word-break:break-all;">' + p.url + '</a></div>';
+          html += '</div>';
+        });
+      }
+
       html += '</div>';
     }
 
